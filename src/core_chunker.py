@@ -524,6 +524,7 @@ def segment_trace_with_ppl_debug(
             "used_boundary_mapping_fallback": False,
             "boundary_mapping_strategy": "tokenizer_offsets",
             "fallback_path_used": None,
+            "cut_after_sentence_indices": [],
         }
         return [trace], [], [[]], diagnostics
 
@@ -538,6 +539,7 @@ def segment_trace_with_ppl_debug(
     current = [sentences[0]]
     chunk_ppl: list[list[float]] = []
     current_ppl: list[float] = []
+    cut_after_sentence_indices: list[int] = []
 
     for i in range(len(ppl_scores)):
         next_sent = sentences[i + 1]
@@ -545,6 +547,7 @@ def segment_trace_with_ppl_debug(
         if i in peaks and word_count >= 15:
             chunks.append(" ".join(current))
             chunk_ppl.append(current_ppl)
+            cut_after_sentence_indices.append(i + 1)
             current = [next_sent]
             current_ppl = []
         else:
@@ -565,6 +568,7 @@ def segment_trace_with_ppl_debug(
         "fallback_path_used": None,
         "model_id": model_id,
         "device": _startup_probe(model_id=model_id, device=device).device,
+        "cut_after_sentence_indices": cut_after_sentence_indices,
     }
     return chunks, ppl_scores, chunk_ppl, diagnostics
 
