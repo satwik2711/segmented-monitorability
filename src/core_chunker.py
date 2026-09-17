@@ -1,20 +1,26 @@
+"""Segment reasoning with top-20 predictive entropy from a local Qwen model.
+
+Run on the MRT sample: python3 src/core_chunker.py
+Dependencies: python3 -m pip install torch transformers numpy scipy
+"""
+
+import argparse
+import json
 import math
 import re
 from collections import Counter
 from bisect import bisect_left
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
-import httpx
 import numpy as np
 from scipy.signal import find_peaks
 
-PPL_MODEL_PORT = 8081
+PPL_MODEL_ID = "Qwen/Qwen3-0.6B-Base"
 PPL_TOP_LOGPROBS = 20
-PPL_REQUEST_TIMEOUT = 300
-PPL_DEFAULT_MAX_WINDOW_TOKENS = 12000
+PPL_DEFAULT_MAX_WINDOW_TOKENS = 768
 PPL_WINDOW_OVERLAP_RATIO = 0.12
 
 _SENTINEL = "\x00"
@@ -112,8 +118,9 @@ _ABBREVIATIONS = sorted(
 
 @dataclass(frozen=True)
 class _ChunkingRuntimeProbe:
-    base_url: str
-    model_id: str | None
+    model_id: str
+    device: str
+    model: Any
     tokenizer: Any
     tokenizer_ref: str
     max_window_tokens: int
@@ -136,295 +143,51 @@ def split_into_sentences(text: str) -> list[str]:
     return [_unmask_abbreviations(s).strip() for s in parts if s.strip()]
 
 
-def _normalize_top_logprobs(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list):
-        normalized: list[dict[str, Any]] = []
-        for entry in raw:
-            if not isinstance(entry, dict):
-                continue
-            logprob = entry.get("logprob")
-            if not isinstance(logprob, (int, float)):
-                continue
-            token = entry.get("token")
-            if token is None:
-                token = entry.get("decoded_token")
-            normalized.append({"token": "" if token is None else str(token), "logprob": float(logprob)})
-        return normalized
-
-    if isinstance(raw, dict):
-        normalized: list[dict[str, Any]] = []
-        for token, logprob in raw.items():
-            if isinstance(logprob, (int, float)):
-                normalized.append({"token": str(token), "logprob": float(logprob)})
-                continue
-            if isinstance(logprob, dict):
-                value = logprob.get("logprob")
-                if not isinstance(value, (int, float)):
-                    continue
-                decoded = logprob.get("decoded_token")
-                if decoded is None:
-                    decoded = logprob.get("token")
-                if decoded is None:
-                    decoded = token
-                normalized.append({"token": str(decoded), "logprob": float(value)})
-        return normalized
-
-    return []
-
-
-def _normalize_base_url(port: int, base_url: str | None) -> str:
-    if base_url:
-        trimmed = base_url.strip().rstrip("/")
-    else:
-        trimmed = f"http://localhost:{port}"
-
-    if trimmed.endswith("/v1/completions"):
-        return trimmed[:-len("/v1/completions")]
-    if trimmed.endswith("/v1"):
-        return trimmed
-
-    parsed = urlparse(trimmed)
-    if parsed.scheme and parsed.netloc:
-        return trimmed
-    return f"http://localhost:{port}"
-
-
-def _completions_url(base_url: str) -> str:
-    return f"{base_url}/v1/completions"
-
-
-def _extract_prompt_logprob_payload(
-    data: dict[str, Any],
-) -> tuple[list[str], list[list[dict[str, Any]]], list[int]]:
-    choices = data.get("choices")
-    if not isinstance(choices, list) or not choices:
-        return [], [], []
-
-    first_choice = choices[0]
-    if not isinstance(first_choice, dict):
-        return [], [], []
-
-    logprobs = first_choice.get("logprobs")
-    if not isinstance(logprobs, dict):
-        return [], [], []
-
-    tokens = logprobs.get("tokens")
-    top_logprobs = logprobs.get("top_logprobs")
-    text_offsets = logprobs.get("text_offset")
-    if not isinstance(tokens, list) or not isinstance(top_logprobs, list) or not isinstance(text_offsets, list):
-        return [], [], []
-
-    n = min(len(tokens), len(top_logprobs), len(text_offsets))
-    if n <= 0:
-        return [], [], []
-
-    prompt_tokens = ["" if token is None else str(token) for token in tokens[:n]]
-    top_per_token = [_normalize_top_logprobs(entry) for entry in top_logprobs[:n]]
-    offsets: list[int] = []
-    for value in text_offsets[:n]:
-        if isinstance(value, int):
-            offsets.append(value)
-            continue
-        if isinstance(value, float) and value.is_integer():
-            offsets.append(int(value))
-            continue
-        return [], [], []
-
-    return prompt_tokens, top_per_token, offsets
-
-
-def _post_completions(
-    base_url: str,
-    payload: dict[str, Any],
-    timeout: int,
-) -> dict[str, Any]:
-    response = httpx.post(
-        _completions_url(base_url),
-        json=payload,
-        timeout=timeout,
-    )
-    response.raise_for_status()
-    data = response.json()
-    if not isinstance(data, dict):
-        raise ValueError("Invalid completions response payload")
-    return data
-
-
-def _request_prompt_logprobs(
-    prompt: str,
-    base_url: str,
-    model_id: str | None,
-    timeout: int,
-    top_logprobs: int = PPL_TOP_LOGPROBS,
-) -> tuple[list[str], list[list[dict[str, Any]]], list[int], dict[str, Any]]:
-    payload: dict[str, Any] = {
-        "prompt": prompt,
-        "max_tokens": 0,
-        "echo": True,
-        "logprobs": top_logprobs,
-        "temperature": 0.0,
-        "chat_template_kwargs": {"enable_thinking": False},
-    }
-    if model_id:
-        payload["model"] = model_id
-
-    data = _post_completions(base_url=base_url, payload=payload, timeout=timeout)
-    prompt_tokens, top_per_token, token_offsets = _extract_prompt_logprob_payload(data)
-    if not prompt_tokens or not top_per_token or not token_offsets:
-        raise ValueError(
-            "Prompt logprobs were not returned. "
-            "This deployment must support /v1/completions with echo=true and max_tokens=0."
-        )
-    return prompt_tokens, top_per_token, token_offsets, data
-
-
-def _parse_int(value: Any) -> int | None:
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float) and value.is_integer():
-        return int(value)
-    if isinstance(value, str):
-        try:
-            return int(value)
-        except ValueError:
-            return None
-    return None
-
-
-def _resolve_model_metadata(
-    base_url: str,
-    requested_model_id: str | None,
-) -> tuple[str | None, int, list[str]]:
-    response = httpx.get(f"{base_url}/v1/models", timeout=PPL_REQUEST_TIMEOUT)
-    response.raise_for_status()
-    data = response.json()
-    if not isinstance(data, dict):
-        raise ValueError("Invalid /v1/models response")
-
-    models = data.get("data")
-    if not isinstance(models, list) or not models:
-        raise ValueError("No models listed by /v1/models")
-
-    selected: dict[str, Any] | None = None
-    if requested_model_id:
-        for model in models:
-            if isinstance(model, dict) and model.get("id") == requested_model_id:
-                selected = model
-                break
-        if selected is None:
-            available = [model.get("id") for model in models if isinstance(model, dict)]
-            raise ValueError(f"Requested model '{requested_model_id}' not in /v1/models: {available}")
-    else:
-        first = models[0]
-        if isinstance(first, dict):
-            selected = first
-
-    resolved_model_id: str | None = requested_model_id
-    max_model_len = PPL_DEFAULT_MAX_WINDOW_TOKENS
-    if isinstance(selected, dict):
-        selected_id = selected.get("id")
-        if isinstance(selected_id, str) and selected_id.strip():
-            resolved_model_id = selected_id
-        parsed_max = _parse_int(selected.get("max_model_len"))
-        if parsed_max is not None and parsed_max > 0:
-            max_model_len = parsed_max
-
-    tokenizer_refs: list[str] = []
-
-    def add_tokenizer_ref(value: Any) -> None:
-        if not isinstance(value, str):
-            return
-        cleaned = value.strip()
-        if not cleaned:
-            return
-        if cleaned not in tokenizer_refs:
-            tokenizer_refs.append(cleaned)
-
-    add_tokenizer_ref(requested_model_id)
-    if isinstance(selected, dict):
-        add_tokenizer_ref(selected.get("id"))
-        add_tokenizer_ref(selected.get("root"))
-        add_tokenizer_ref(selected.get("parent"))
-        add_tokenizer_ref(selected.get("model"))
-        add_tokenizer_ref(selected.get("tokenizer"))
-        add_tokenizer_ref(selected.get("tokenizer_id"))
-    add_tokenizer_ref(resolved_model_id)
-
-    # Common served-model-name to HF-id conversion for local Qwen3 servers.
-    for tokenizer_ref in list(tokenizer_refs):
-        match = re.fullmatch(r"qwen3-([0-9]+(?:\.[0-9]+)?)b", tokenizer_ref.lower())
-        if match:
-            add_tokenizer_ref(f"Qwen/Qwen3-{match.group(1)}B")
-
-    if not tokenizer_refs:
-        raise ValueError("Unable to derive tokenizer reference from /v1/models response")
-    return resolved_model_id, max_model_len, tokenizer_refs
-
-
-@lru_cache(maxsize=16)
-def _load_tokenizer(tokenizer_refs: tuple[str, ...]) -> tuple[Any, str]:
+@lru_cache(maxsize=2)
+def _startup_probe(model_id: str = PPL_MODEL_ID, device: str | None = None) -> _ChunkingRuntimeProbe:
+    """Load the proxy LM once and cap windows to keep logits memory bounded."""
     try:
-        from transformers import AutoTokenizer
-    except Exception as exc:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+    except ImportError as exc:
         raise RuntimeError(
-            "transformers is required for tokenizer-based window sizing. "
-            "Install dependencies with `uv sync`."
+            "Direct scoring needs torch and transformers. Install with "
+            "`python3 -m pip install torch transformers numpy scipy`."
         ) from exc
 
-    errors: list[str] = []
-    for tokenizer_ref in tokenizer_refs:
-        for local_files_only in (True, False):
-            try:
-                tokenizer = AutoTokenizer.from_pretrained(
-                    tokenizer_ref,
-                    trust_remote_code=True,
-                    local_files_only=local_files_only,
-                )
-                return tokenizer, tokenizer_ref
-            except Exception as exc:
-                scope = "local" if local_files_only else "remote"
-                errors.append(f"{tokenizer_ref} ({scope}): {exc}")
-
-    raise RuntimeError(
-        "Failed to load tokenizer for chunking model. Tried refs: "
-        f"{list(tokenizer_refs)}. Last errors: {errors[-3:]}"
-    )
-
-
-@lru_cache(maxsize=16)
-def _startup_probe(
-    port: int,
-    base_url: str | None,
-    model_id: str | None,
-) -> _ChunkingRuntimeProbe:
-    normalized_base_url = _normalize_base_url(port=port, base_url=base_url)
-    resolved_model_id, model_context_window, tokenizer_refs = _resolve_model_metadata(
-        base_url=normalized_base_url,
-        requested_model_id=model_id,
-    )
-    tokenizer, tokenizer_ref = _load_tokenizer(tuple(tokenizer_refs))
-    max_window_tokens = max(2,model_context_window)
-    overlap_tokens = max(1, int(max_window_tokens * PPL_WINDOW_OVERLAP_RATIO))
-
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    if not tokenizer.is_fast:
+        raise RuntimeError("Boundary mapping requires a fast tokenizer with offset_mapping")
+    dtype = torch.float32 if device == "cpu" else torch.float16
+    model = AutoModelForCausalLM.from_pretrained(model_id, dtype=dtype).to(device).eval()
+    context_limit = getattr(model.config, "max_position_embeddings", None)
+    max_window_tokens = min(PPL_DEFAULT_MAX_WINDOW_TOKENS, context_limit or PPL_DEFAULT_MAX_WINDOW_TOKENS)
     return _ChunkingRuntimeProbe(
-        base_url=normalized_base_url,
-        model_id=resolved_model_id,
+        model_id=model_id,
+        device=device,
+        model=model,
         tokenizer=tokenizer,
-        tokenizer_ref=tokenizer_ref,
+        tokenizer_ref=model_id,
         max_window_tokens=max_window_tokens,
-        overlap_tokens=overlap_tokens,
+        overlap_tokens=max(1, int(max_window_tokens * PPL_WINDOW_OVERLAP_RATIO)),
     )
 
 
 def probe_chunking_runtime(
-    port: int = PPL_MODEL_PORT,
-    base_url: str | None = None,
-    model_id: str | None = None,
+    model_id: str = PPL_MODEL_ID,
+    device: str | None = None,
 ) -> dict[str, Any]:
-    probe = _startup_probe(port=port, base_url=base_url, model_id=model_id)
+    probe = _startup_probe(model_id=model_id, device=device)
     return {
-        "base_url": probe.base_url,
         "model_id": probe.model_id,
+        "device": probe.device,
         "tokenizer_ref": probe.tokenizer_ref,
         "max_window_tokens": probe.max_window_tokens,
         "overlap_tokens": probe.overlap_tokens,
@@ -507,7 +270,7 @@ def _map_boundaries_with_offsets(
     if expected_count == 0:
         return []
     if not token_offsets:
-        raise ValueError("Missing text_offset data for boundary mapping")
+        raise ValueError("Missing tokenizer offsets for boundary mapping")
 
     raw_positions: list[int] = []
     for boundary in boundary_offsets:
@@ -526,103 +289,51 @@ def _map_boundaries_with_offsets(
     )
 
     if not _is_valid_boundary_positions(positions, token_count, expected_count):
-        raise ValueError("Invalid boundary token positions from text_offset mapping")
+        raise ValueError("Invalid boundary token positions from tokenizer offsets")
     return positions
-
-
-def _map_boundaries_with_tokenizer(
-    sentences_window: list[str],
-    tokenizer: Any,
-    token_count: int,
-) -> list[int]:
-    boundary_count = len(sentences_window) - 1
-    if boundary_count <= 0:
-        return []
-
-    raw_positions: list[int] = []
-    prefix = sentences_window[0]
-    for sentence in sentences_window[1:]:
-        raw_positions.append(_count_tokens_with_tokenizer(tokenizer, prefix))
-        prefix = f"{prefix} {sentence}"
-
-    positions = _coerce_boundary_positions(
-        raw_positions=raw_positions,
-        token_count=token_count,
-        expected_count=boundary_count,
-    )
-    if not _is_valid_boundary_positions(positions, token_count, boundary_count):
-        raise ValueError("Invalid boundary token positions from tokenizer fallback mapping")
-    return positions
-
-
-def _perplexity_from_top_logprobs(top_logprobs: list[dict[str, Any]]) -> float:
-    logprobs = [
-        float(entry["logprob"])
-        for entry in top_logprobs
-        if isinstance(entry, dict) and isinstance(entry.get("logprob"), (int, float))
-    ]
-    if not logprobs:
-        return 1.0
-
-    max_logprob = max(logprobs)
-    exp_shifted = [math.exp(logprob - max_logprob) for logprob in logprobs]
-    total = sum(exp_shifted)
-    if total <= 0:
-        return 1.0
-
-    probs = [value / total for value in exp_shifted]
-    entropy = -sum(p * math.log2(p) for p in probs if p > 0)
-    return 2 ** entropy
 
 
 def _score_window_boundaries(
     sentences_window: list[str],
-    base_url: str,
-    model_id: str | None,
-    tokenizer: Any,
+    probe: _ChunkingRuntimeProbe,
 ) -> tuple[list[tuple[int, int, float]], int, str]:
+    """Score each boundary using the distribution for its next prompt token."""
     if not sentences_window:
-        return [], 0, "text_offset"
+        return [], 0, "tokenizer_offsets"
+
+    import torch
 
     prompt = " ".join(sentences_window)
-    prompt_tokens, top_per_token, token_offsets, _ = _request_prompt_logprobs(
-        prompt=prompt,
-        base_url=base_url,
-        model_id=model_id,
-        timeout=PPL_REQUEST_TIMEOUT,
+    encoded = probe.tokenizer(
+        prompt,
+        add_special_tokens=False,
+        return_offsets_mapping=True,
+        return_tensors="pt",
     )
-    token_count = len(prompt_tokens)
+    offsets = encoded.pop("offset_mapping")[0].tolist()
+    token_count = encoded["input_ids"].shape[1]
+    if token_count > probe.max_window_tokens:
+        raise ValueError(f"Window has {token_count} tokens; limit is {probe.max_window_tokens}")
+    if len(sentences_window) < 2:
+        return [], token_count, "tokenizer_offsets"
 
-    boundary_offsets = _sentence_boundary_char_offsets(sentences_window)
-    if not boundary_offsets:
-        return [], token_count, "text_offset"
-
-    try:
-        boundary_positions = _map_boundaries_with_offsets(
-            boundary_offsets=boundary_offsets,
-            token_offsets=token_offsets,
-            token_count=token_count,
-        )
-        mapping_mode = "text_offset"
-    except ValueError as offset_exc:
-        try:
-            boundary_positions = _map_boundaries_with_tokenizer(
-                sentences_window=sentences_window,
-                tokenizer=tokenizer,
-                token_count=token_count,
-            )
-            mapping_mode = "tokenizer_fallback"
-        except ValueError as tokenizer_exc:
-            raise ValueError(
-                "Boundary mapping failed via text_offset and tokenizer fallback. "
-                f"text_offset_error={offset_exc}; tokenizer_error={tokenizer_exc}"
-            ) from tokenizer_exc
-
-    scored_boundaries: list[tuple[int, int, float]] = []
-    for local_idx, token_pos in enumerate(boundary_positions):
-        ppl = _perplexity_from_top_logprobs(top_per_token[token_pos])
-        scored_boundaries.append((local_idx, token_pos, ppl))
-    return scored_boundaries, token_count, mapping_mode
+    boundary_positions = _map_boundaries_with_offsets(
+        _sentence_boundary_char_offsets(sentences_window),
+        [start for start, _ in offsets],
+        token_count,
+    )
+    input_ids = encoded["input_ids"].to(probe.device)
+    attention_mask = encoded["attention_mask"].to(probe.device)
+    with torch.inference_mode():
+        logits = probe.model(input_ids=input_ids, attention_mask=attention_mask).logits[0]
+        scores: list[tuple[int, int, float]] = []
+        for local_idx, token_pos in enumerate(boundary_positions):
+            # Causal logits at token_pos - 1 predict the token at token_pos.
+            top_logits = torch.topk(logits[token_pos - 1].float(), k=PPL_TOP_LOGPROBS).values
+            probabilities = torch.softmax(top_logits, dim=-1)
+            entropy = -(probabilities * torch.log2(probabilities)).sum()
+            scores.append((local_idx, token_pos, float(torch.exp2(entropy).item())))
+    return scores, token_count, "tokenizer_offsets"
 
 
 def _count_tokens_with_tokenizer(tokenizer: Any, text: str) -> int:
@@ -699,9 +410,8 @@ def _build_sentence_windows(
 
 def _compute_boundary_perplexity(
     sentences: list[str],
-    port: int,
-    base_url: str | None = None,
-    model_id: str | None = None,
+    model_id: str = PPL_MODEL_ID,
+    device: str | None = None,
 ) -> tuple[list[float], dict[str, Any]]:
     if len(sentences) < 2:
         return [], {
@@ -711,7 +421,7 @@ def _compute_boundary_perplexity(
             "used_boundary_mapping_fallback": False,
         }
 
-    probe = _startup_probe(port=port, base_url=base_url, model_id=model_id)
+    probe = _startup_probe(model_id=model_id, device=device)
     windows = _build_sentence_windows(
         sentences=sentences,
         max_window_tokens=probe.max_window_tokens,
@@ -728,9 +438,7 @@ def _compute_boundary_perplexity(
         sentences_window = sentences[start:end]
         scored_boundaries, token_count, mapping_mode = _score_window_boundaries(
             sentences_window=sentences_window,
-            base_url=probe.base_url,
-            model_id=probe.model_id,
-            tokenizer=probe.tokenizer,
+            probe=probe,
         )
         mapping_mode_counts[mapping_mode] += 1
 
@@ -754,7 +462,7 @@ def _compute_boundary_perplexity(
         "window_count": len(windows),
         "windowing_used": len(windows) > 1,
         "boundary_mapping_mode_counts": dict(mapping_mode_counts),
-        "used_boundary_mapping_fallback": mapping_mode_counts.get("tokenizer_fallback", 0) > 0,
+        "used_boundary_mapping_fallback": False,
     }
     return [float(value) for value in ppl_scores if value is not None], diagnostics
 
@@ -777,39 +485,34 @@ def _find_cognitive_peaks(ppl_scores: list[float]) -> set[int]:
 
 def segment_trace(
     trace: str,
-    port: int = PPL_MODEL_PORT,
-    base_url: str | None = None,
-    model_id: str | None = None,
+    model_id: str = PPL_MODEL_ID,
+    device: str | None = None,
 ) -> list[str]:
     chunks, _, _ = segment_trace_with_ppl(
         trace,
-        port=port,
-        base_url=base_url,
         model_id=model_id,
+        device=device,
     )
     return chunks
 
 
 def segment_trace_with_ppl(
     trace: str,
-    port: int = PPL_MODEL_PORT,
-    base_url: str | None = None,
-    model_id: str | None = None,
+    model_id: str = PPL_MODEL_ID,
+    device: str | None = None,
 ) -> tuple[list[str], list[float], list[list[float]]]:
     chunks, ppl_scores, chunk_ppl, _ = segment_trace_with_ppl_debug(
         trace,
-        port=port,
-        base_url=base_url,
         model_id=model_id,
+        device=device,
     )
     return chunks, ppl_scores, chunk_ppl
 
 
 def segment_trace_with_ppl_debug(
     trace: str,
-    port: int = PPL_MODEL_PORT,
-    base_url: str | None = None,
-    model_id: str | None = None,
+    model_id: str = PPL_MODEL_ID,
+    device: str | None = None,
 ) -> tuple[list[str], list[float], list[list[float]], dict[str, Any]]:
     sentences = split_into_sentences(trace)
     if len(sentences) < 2:
@@ -819,16 +522,15 @@ def segment_trace_with_ppl_debug(
             "windowing_used": False,
             "boundary_mapping_mode_counts": {},
             "used_boundary_mapping_fallback": False,
-            "boundary_mapping_strategy": "text_offset",
+            "boundary_mapping_strategy": "tokenizer_offsets",
             "fallback_path_used": None,
         }
         return [trace], [], [[]], diagnostics
 
     ppl_scores, boundary_diagnostics = _compute_boundary_perplexity(
         sentences,
-        port=port,
-        base_url=base_url,
         model_id=model_id,
+        device=device,
     )
     peaks = _find_cognitive_peaks(ppl_scores)
 
@@ -853,16 +555,61 @@ def segment_trace_with_ppl_debug(
         chunks.append(" ".join(current))
         chunk_ppl.append(current_ppl)
 
-    used_fallback = bool(boundary_diagnostics.get("used_boundary_mapping_fallback"))
     diagnostics = {
         "sentence_count": len(sentences),
         "window_count": int(boundary_diagnostics.get("window_count", 0)),
         "windowing_used": bool(boundary_diagnostics.get("windowing_used", False)),
         "boundary_mapping_mode_counts": boundary_diagnostics.get("boundary_mapping_mode_counts", {}),
-        "used_boundary_mapping_fallback": used_fallback,
-        "boundary_mapping_strategy": (
-            "text_offset_then_tokenizer_fallback" if used_fallback else "text_offset"
-        ),
-        "fallback_path_used": "tokenizer_boundary_mapping" if used_fallback else None,
+        "used_boundary_mapping_fallback": False,
+        "boundary_mapping_strategy": "tokenizer_offsets",
+        "fallback_path_used": None,
+        "model_id": model_id,
+        "device": _startup_probe(model_id=model_id, device=device).device,
     }
     return chunks, ppl_scores, chunk_ppl, diagnostics
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, default=Path("data/mrt_shade_tool_use_sample.jsonl"))
+    parser.add_argument("--output", type=Path, default=Path("data/mrt_shade_tool_use_segmented.jsonl"))
+    parser.add_argument("--model-id", default=PPL_MODEL_ID)
+    parser.add_argument("--device", choices=("cpu", "mps", "cuda"), default=None)
+    parser.add_argument("--limit", type=int, default=None, help="Process only the first N trajectories")
+    args = parser.parse_args()
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be positive")
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with args.input.open(encoding="utf-8") as source, args.output.open("w", encoding="utf-8") as target:
+        for line in source:
+            if args.limit is not None and count >= args.limit:
+                break
+            row = json.loads(line)
+            blocks = row.get("reasoning_blocks")
+            if not isinstance(blocks, list):
+                raise ValueError(f"Missing reasoning_blocks in input row {count + 1}")
+            segmented_blocks = []
+            for block in blocks:
+                chunks, scores, _, diagnostics = segment_trace_with_ppl_debug(
+                    block, model_id=args.model_id, device=args.device
+                )
+                segmented_blocks.append(
+                    {"chunks": chunks, "boundary_scores": scores, "diagnostics": diagnostics}
+                )
+            result = {
+                "source_path": row["source_path"],
+                "task": row["task"],
+                "side_task_success": row["side_task_success"],
+                "model_id": args.model_id,
+                "segmented_reasoning_blocks": segmented_blocks,
+            }
+            target.write(json.dumps(result, ensure_ascii=False) + "\n")
+            count += 1
+            print(f"Segmented {count}: {row['source_path']}", flush=True)
+    print(f"Wrote {count} segmented trajectories to {args.output}")
+
+
+if __name__ == "__main__":
+    main()
