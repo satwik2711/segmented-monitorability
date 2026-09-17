@@ -1,7 +1,7 @@
 """Segment reasoning with top-20 predictive entropy from a local Qwen model.
 
 Run on the MRT sample: python3 src/core_chunker.py
-Dependencies: python3 -m pip install torch transformers numpy scipy
+Dependencies: uv sync
 """
 
 import argparse
@@ -152,7 +152,7 @@ def _startup_probe(model_id: str = PPL_MODEL_ID, device: str | None = None) -> _
     except ImportError as exc:
         raise RuntimeError(
             "Direct scoring needs torch and transformers. Install with "
-            "`python3 -m pip install torch transformers numpy scipy`."
+            "`uv sync`."
         ) from exc
 
     if device is None:

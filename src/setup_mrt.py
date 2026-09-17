@@ -1,6 +1,6 @@
 """Download a near-balanced, single-condition MRT tool-use sample.
 
-Install: python3 -m pip install huggingface_hub
+Install: uv sync
 Run:     python3 src/setup_mrt.py
 """
 
@@ -100,7 +100,7 @@ def main() -> None:
     try:
         from huggingface_hub import HfApi
     except ImportError as exc:
-        raise SystemExit("Install dependency: python3 -m pip install huggingface_hub") from exc
+        raise SystemExit("Install dependency: uv sync") from exc
 
     api = HfApi()
     revision = api.dataset_info(REPO, revision=args.revision).sha
