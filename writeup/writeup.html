@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmenting Monitorability | Satwik Pandey</title>
+<meta name="description" content="Segmenting monitorability: whether representing a chain of thought as semantic turns can help a monitor localize, track, and detect evidence earlier.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ivory:#F8F4EA; --card:#EFE7D8; --card-soft:#F3EDDE; --line:#D6D9CD; --ink:#1E2F23; --text:#2F3A2D;
+  --muted:#596754; --mid:#9AA493; --green:#3F8F56; --green-dark:#2C6F42; --green-deep:#1F5433;
+  --clay:#C9785C; --clay-ink:#A5573F; --olive:#3F8F56; --sky:#6F91A8; --white:#FFFDF7;
+  --serif:"Source Serif 4",Charter,"Iowan Old Style",Georgia,serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --col:42rem; --wide:56rem;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ivory);color:var(--text);font-family:var(--serif);font-size:1.1875rem;line-height:1.68;font-optical-sizing:auto}
+a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--mid);text-underline-offset:.18em}
+a:hover{text-decoration-color:var(--green)}
+a:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:2px}
+.site{max-width:var(--wide);margin:0 auto;padding:1.25rem 1.5rem;display:flex;justify-content:space-between;font-family:var(--sans);font-size:.875rem}
+.site a{text-decoration:none;color:var(--muted)} .site a:hover{color:var(--ink)}
+main{padding:0 1.5rem 5rem}
+.col{max-width:var(--col);margin-left:auto;margin-right:auto}
+header.post{max-width:var(--col);margin:3.5rem auto 2.5rem}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.1rem,5vw,3.1rem);line-height:1.08;letter-spacing:-.018em;color:var(--ink);margin:0 0 1rem}
+.dek{font-size:1.3rem;line-height:1.45;color:var(--muted);margin:0 0 1.5rem}
+.byline{font-family:var(--sans);font-size:.9rem;color:var(--muted)}
+.byline strong{color:var(--ink);font-weight:500}
+h2{font-family:var(--serif);font-weight:600;font-size:1.7rem;line-height:1.2;color:var(--ink);margin:3.6rem 0 1rem;letter-spacing:-.01em}
+h3{font-family:var(--sans);font-weight:600;font-size:1.05rem;color:var(--ink);margin:2.4rem 0 .6rem}
+p{margin:0 0 1.15rem}
+strong{font-weight:600;color:var(--ink)}
+em{font-style:italic}
+code{font-family:var(--mono);font-size:.84em;background:var(--card);padding:.08em .32em;border-radius:3px}
+sup.ref{font-family:var(--sans);font-size:.68em;line-height:0;margin-left:1px}
+sup.ref a{text-decoration:none;color:var(--green-dark)}
+ul,ol{padding-left:1.3rem;margin:0 0 1.2rem} li{margin:.35rem 0}
+.summary{max-width:var(--col);margin:0 auto 1rem;background:var(--card-soft);border:1px solid var(--line);border-radius:6px;padding:1.4rem 1.6rem 1.2rem}
+.summary h2{font-family:var(--sans);font-size:1rem;margin:0 0 .6rem}
+.summary ul{margin:0;padding-left:1.1rem} .summary li{margin:.5rem 0;line-height:1.55}
+.status{max-width:var(--col);margin:0 auto 2.5rem;font-size:1rem;color:var(--muted);line-height:1.55}
+.status strong{color:var(--text)}
+nav.toc{max-width:var(--col);margin:0 auto 1rem;font-family:var(--sans);font-size:.92rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:1rem 0}
+nav.toc ol{margin:0;padding-left:1.2rem;columns:2;column-gap:2rem} nav.toc li{margin:.2rem 0;break-inside:avoid}
+nav.toc a{text-decoration:none;color:var(--muted)} nav.toc a:hover{color:var(--ink)}
+figure{max-width:var(--wide);margin:2.4rem auto 2.6rem;padding:0}
+.plate{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:1.4rem 1.4rem 1rem;overflow-x:auto}
+.fig-svg{overflow:visible;display:block;width:100%;min-width:620px;height:auto}
+figcaption{max-width:var(--col);margin:.9rem auto 0;font-family:var(--sans);font-size:.88rem;line-height:1.55;color:var(--muted)}
+figcaption b{color:var(--ink);font-weight:600}
+.fig-svg .lab{font-family:var(--sans);font-size:13px;fill:var(--ink)}
+.fig-svg .sm{font-size:11.5px}
+.fig-svg .muted{fill:var(--muted)}
+.fig-svg .strong{font-weight:600}
+.fig-svg .num{font-family:var(--serif);font-size:22px;fill:var(--ink)}
+.fig-svg .sent{font-family:var(--serif);font-size:14.5px;fill:var(--ink)}
+.fig-svg .ann{font-family:var(--serif);font-style:italic;font-size:13px;fill:var(--muted)}
+.position{max-width:var(--col);margin:2rem auto;padding:1.6rem 1.8rem;background:var(--white);border:1px solid var(--line);border-radius:6px}
+.position p{font-size:1.32rem;line-height:1.45;color:var(--ink);margin:0}
+.position .small{font-family:var(--sans);font-size:.85rem;color:var(--muted);margin-bottom:.6rem}
+.math{max-width:var(--col);margin:1.4rem auto;background:var(--card);border-radius:6px;padding:1.1rem 1.4rem;font-size:1.05rem}
+.math .eq{font-family:var(--serif);font-size:1.25rem;text-align:center;margin:.6rem 0;color:var(--ink)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:2.2rem;margin:.9rem 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:.15rem;width:1.5rem;height:1.5rem;border-radius:50%;border:1px solid var(--green);color:var(--green-dark);font-family:var(--sans);font-size:.8rem;display:flex;align-items:center;justify-content:center}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.92rem;margin:1rem 0 1.6rem}
+th,td{text-align:left;vertical-align:top;padding:.6rem .7rem;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--ink);border-bottom:1.5px solid var(--ink)}
+td:first-child{font-weight:500;color:var(--ink);white-space:nowrap}
+.tablewrap{overflow-x:auto}
+blockquote.trace{font-family:var(--mono);font-size:.86rem;background:var(--white);border:1px solid var(--line);border-radius:6px;padding:.9rem 1.1rem;margin:1.2rem 0;line-height:1.9;color:var(--text)}
+blockquote.trace span{background:#E3EADC;border-radius:2px;padding:.05em .25em;margin-right:.35em}
+.problem{margin:1.6rem 0}
+.problem h3{margin-top:0}
+.refs{font-size:.92rem;line-height:1.5}
+.refs ol{padding-left:1.6rem} .refs li{margin:.45rem 0;color:var(--muted)}
+.refs li a{color:var(--text)}
+.note{font-family:var(--sans);font-size:.88rem;color:var(--muted);border-top:1px solid var(--line);padding-top:1rem;margin-top:2.5rem}
+footer{max-width:var(--wide);margin:0 auto;padding:2rem 1.5rem 3rem;font-family:var(--sans);font-size:.85rem;color:var(--muted)}
+
+.codeblock{max-width:var(--col);margin:1.45rem auto 1.65rem;background:var(--ink);color:#F8F4EA;border-radius:7px;padding:1.1rem 1.25rem;overflow-x:auto;border:1px solid rgba(31,84,51,.3);box-shadow:0 8px 24px rgba(31,47,35,.08)}
+.codeblock code{display:block;background:none;padding:0;color:inherit;font-size:.78rem;line-height:1.65;white-space:pre;font-family:var(--mono)}
+.term-note{max-width:var(--col);margin:1.35rem auto;padding:1.05rem 1.25rem;border-left:3px solid var(--green);background:#EAF0E4;font-family:var(--sans);font-size:.92rem;line-height:1.55;color:var(--muted)}
+.term-note strong{color:var(--green-deep)}
+
+.repr-layer{max-width:var(--wide);margin:2rem auto 2.7rem;padding:1.25rem 1.35rem;background:var(--white);border:1px solid var(--line);border-radius:7px;font-family:var(--sans)}
+.repr-flow{display:grid;grid-template-columns:1fr auto 1.25fr auto 1fr auto .85fr;gap:.55rem;align-items:center}
+.repr-node{min-height:92px;padding:.85rem .9rem;border:1px solid var(--line);border-radius:6px;background:#FBF8F0}
+.repr-node.focus{background:#F4E7E0;border-color:#D7A48F}
+.repr-node .k{display:block;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.35rem}
+.repr-node strong{display:block;font-family:var(--serif);font-size:1.05rem;line-height:1.2}
+.repr-node small{display:block;margin-top:.35rem;color:var(--muted);font-size:.75rem;line-height:1.35}
+.repr-arrow{color:var(--green-dark);font-size:1.3rem;text-align:center}
+.repr-note{margin:.9rem 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}
+.hypothesis{max-width:var(--col);margin:1.8rem auto;padding:1.25rem 1.45rem;background:var(--white);border:1px solid #B7CBB5;border-left:4px solid var(--green-dark);border-radius:6px}
+.hypothesis .kicker{font-family:var(--sans);font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--green-dark);margin-bottom:.4rem}
+.hypothesis p{margin:0;font-size:1.12rem;line-height:1.5;color:var(--ink)}
+@media (max-width:760px){.repr-flow{grid-template-columns:1fr}.repr-arrow{transform:rotate(90deg)}}
+.audit-plate{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:1.25rem;}
+.paired-audit{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;font-family:var(--sans)}
+.audit-side{border:1px solid var(--line);border-radius:6px;padding:1rem 1rem .9rem;background:#FBF8F0}
+.audit-side.semantic{background:#F4E7E0;border-color:#D7A48F}
+.audit-side .kicker{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--muted);margin-bottom:.35rem}
+.audit-side h3{font-family:var(--serif);font-size:1.22rem;margin:0 0 .7rem;color:var(--ink)}
+.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.metric{padding:.65rem .7rem;border-top:1px solid var(--line);background:rgba(255,253,247,.55)}
+.metric span{display:block;font-size:.69rem;line-height:1.25;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.metric strong{display:block;margin-top:.2rem;font-family:var(--serif);font-size:1.28rem;color:var(--ink)}
+.audit-foot{grid-column:1/-1;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:.6rem .2rem 0;color:var(--muted);font-size:.78rem;line-height:1.4}
+.audit-side.semantic .kicker{color:var(--clay-ink)}
+.audit-side.semantic .metric strong{color:var(--clay-ink)}
+.audit-foot b{color:var(--clay-ink);font-weight:600}
+@media (max-width:700px){.paired-audit{grid-template-columns:1fr}.audit-foot{display:block}.audit-foot span{display:block;margin-top:.25rem}}
+
+@media (max-width:640px){
+  body{font-size:1.08rem}
+  nav.toc ol{columns:1}
+  .plate{padding:1rem .8rem .6rem}
+  .position p{font-size:1.15rem}
+}
+@media print{body{background:#FFFDF7}.site,nav.toc{display:none}}
+</style>
+</head>
+<body>
+<div class="site"><a href="https://satwik2711.github.io">Satwik Pandey</a><a href="https://satwik2711.github.io/#research">Research</a></div>
+<main>
+
+<header class="post">
+<h1>Segmenting Monitorability</h1>
+<p class="dek">Chain-of-thought monitors can read the reasoning trace. But the same trace can be represented in very different ways. This post asks whether exposing coherent semantic turns can help a monitor localize evidence, track how it evolves, and catch it earlier—without changing a single word of the trace.</p>
+<div class="byline"><strong>Satwik Pandey</strong>, September 2026. About 20 minutes.</div>
+</header>
+
+<section class="summary" aria-labelledby="tldr">
+<h2 id="tldr">TL;DR</h2>
+<ul>
+<li><strong>CoT monitoring has established that reasoning traces can contain useful supervisory signal.</strong> What is much less settled is how the same trace should be represented to the monitor.</li>
+<li><strong>Segmentation does not create information.</strong> Its possible value is as an inductive bias: expose where evidence appears, whether it persists, and how the reasoning changes over time.</li>
+<li><strong>The obvious finer units solve different problems.</strong> Splitting on epistemic cue words produced <strong>81.7 chunks per trace</strong> and severe fragmentation in a 100-trace audit; fixed four-sentence windows were <strong>93.5% well-formed</strong>. The weakness of fixed windows is not readability—their cuts simply ignore what the reasoning is doing.</li>
+<li><strong>Adaptive semantic turns are one candidate representation.</strong> In a separate paired audit over 2,082 traces, they produced fewer, larger units and almost eliminated tiny chunks, while also exposing a real over-merging tail.</li>
+<li><strong>The actual hypothesis is downstream.</strong> Holding the trace, monitor, prompt, and token budget fixed, semantically aligned boundaries should improve localization, lead time, or robustness relative to fixed and randomized boundaries. They do not need to improve final AUROC to be useful.</li>
+<li><strong>The mechanism here is deliberately cheap.</strong> Score sentence boundaries by next-token predictive entropy, convert it to an effective branching factor, smooth the sequence, and cut at unusually high local peaks subject to a minimum-length constraint.</li>
+</ul>
+</section>
+
+<figure class="opening-visual" aria-labelledby="hero-title hero-desc">
+<div class="plate">
+<svg viewBox="0 0 1000 455" role="img" class="fig-svg">
+  <title id="hero-title">A reasoning trace represented as semantic turns read by a chunk-aware monitor</title>
+  <desc id="hero-desc">A curved reasoning trajectory moves through frame, test, revise, verify, and conclude stages. Dashed boundary markers separate semantic turns, which feed into a monitor that can localize, track, and intervene.</desc>
+
+  <text x="26" y="34" class="lab sm strong" style="letter-spacing:.08em;text-transform:uppercase;fill:#A5573F">A trace, read as turns</text>
+  <text x="26" y="57" class="ann">Keep the rollout intact; expose the local structure underneath it.</text>
+
+  <path d="M40 234 C110 184, 170 202, 236 152 C304 101, 365 126, 442 184 C514 238, 575 217, 650 144 C718 78, 785 113, 844 168" fill="none" stroke="#F1D8CF" stroke-width="42" stroke-linecap="round"/>
+  <path d="M40 234 C110 184, 170 202, 236 152 C304 101, 365 126, 442 184 C514 238, 575 217, 650 144 C718 78, 785 113, 844 168" fill="none" stroke="#C9785C" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M44 244 C112 196, 173 212, 239 163" fill="none" stroke="#FFFDF7" stroke-width="2" stroke-dasharray="5 7"/>
+  <path d="M247 158 C308 116, 365 139, 435 189" fill="none" stroke="#FFFDF7" stroke-width="2" stroke-dasharray="5 7"/>
+  <path d="M449 194 C518 237, 580 213, 643 151" fill="none" stroke="#FFFDF7" stroke-width="2" stroke-dasharray="5 7"/>
+  <path d="M659 138 C720 88, 780 118, 838 173" fill="none" stroke="#FFFDF7" stroke-width="2" stroke-dasharray="5 7"/>
+
+  <g>
+    <line x1="238" y1="92" x2="238" y2="276" stroke="#A5573F" stroke-width="1" stroke-dasharray="5 6" opacity=".58"/>
+    <circle cx="238" cy="92" r="5" fill="#F8F4EA" stroke="#A5573F" stroke-width="2"/>
+    <line x1="443" y1="111" x2="443" y2="287" stroke="#A5573F" stroke-width="1" stroke-dasharray="5 6" opacity=".58"/>
+    <circle cx="443" cy="111" r="5" fill="#F8F4EA" stroke="#A5573F" stroke-width="2"/>
+    <line x1="649" y1="76" x2="649" y2="263" stroke="#A5573F" stroke-width="1" stroke-dasharray="5 6" opacity=".58"/>
+    <circle cx="649" cy="76" r="5" fill="#F8F4EA" stroke="#A5573F" stroke-width="2"/>
+  </g>
+
+  <g>
+    <text x="70" y="188" class="lab strong">Frame</text>
+    <text x="70" y="207" class="lab sm muted">What does the task require?</text>
+    <text x="278" y="113" class="lab strong">Test</text>
+    <text x="278" y="132" class="lab sm muted">Try a plausible route.</text>
+    <text x="476" y="250" class="lab strong">Revise</text>
+    <text x="476" y="269" class="lab sm muted">A contradiction changes direction.</text>
+    <text x="684" y="92" class="lab strong">Verify</text>
+    <text x="684" y="111" class="lab sm muted">Check the surviving claim.</text>
+    <text x="766" y="222" class="lab strong">Conclude</text>
+    <text x="766" y="241" class="lab sm muted">Commit—or fail to converge.</text>
+  </g>
+
+  <line x1="828" y1="165" x2="873" y2="183" stroke="#A5573F" stroke-width="2"/>
+  <circle cx="901" cy="190" r="67" fill="#EFE7D8" stroke="#9FC0A4" stroke-width="1.4"/>
+  <circle cx="901" cy="190" r="50" fill="none" stroke="#B7CBB5" stroke-width="1"/>
+  <circle cx="901" cy="190" r="34" fill="#1F5433"/>
+  <text x="901" y="185" class="lab sm strong" text-anchor="middle" style="fill:#FFFDF7">CHUNK-AWARE</text>
+  <text x="901" y="201" class="lab sm strong" text-anchor="middle" style="fill:#FFFDF7">MONITOR</text>
+
+  <line x1="26" y1="335" x2="974" y2="335" stroke="#D6D9CD"/>
+  <g>
+    <line x1="55" y1="360" x2="55" y2="411" stroke="#3F8F56" stroke-width="2"/>
+    <text x="72" y="374" class="lab strong">Localize</text>
+    <text x="72" y="394" class="lab sm muted">where evidence first appears</text>
+
+    <line x1="359" y1="360" x2="359" y2="411" stroke="#6F91A8" stroke-width="2"/>
+    <text x="376" y="374" class="lab strong">Track</text>
+    <text x="376" y="394" class="lab sm muted">how the reasoning changes over time</text>
+
+    <line x1="685" y1="360" x2="685" y2="411" stroke="#C9785C" stroke-width="2"/>
+    <text x="702" y="374" class="lab strong">Intervene</text>
+    <text x="702" y="394" class="lab sm muted">before the final action, when possible</text>
+  </g>
+</svg>
+</div>
+<figcaption>A useful mental model for the rest of the post: the chain of thought stays verbatim, but boundaries expose the sequence of reasoning moves underneath it. This is the core visual idea from the earlier figure set, adapted here to the quieter blog layout.</figcaption>
+</figure>
+
+
+
+
+<p class="status"><strong>Epistemic status:</strong> a position plus a working prototype. The evidence is exploratory: a rubric-based chunk-quality audit on 100 traces, a paired segmentation audit over 2,082 exact-coverage traces from nine stored runs, and a hand analysis of 20 MMLU traces from Qwen3-4B-Thinking-2507. None of this shows that semantic chunking improves a monitor. Everything here is black-box analysis of text and log-probabilities, not mechanistic interpretability.</p>
+
+<nav class="toc" aria-label="Contents">
+<ol>
+<li><a href="#landscape">Where CoT monitoring stands</a></li>
+<li><a href="#granularity">The granularity problem</a></li>
+<li><a href="#position">The position</a></li>
+<li><a href="#mechanism">A mechanism: cut where the next step branches</a></li>
+<li><a href="#enables">What turns make possible</a></li>
+<li><a href="#open">Open problems</a></li>
+<li><a href="#limits">Limitations</a></li>
+<li><a href="#land">Where I land</a></li>
+</ol>
+</nav>
+
+<div class="col">
+<h2 id="landscape">Where CoT monitoring stands</h2>
+
+<p>Reasoning models externalize part of their computation as text. The old <strong>scratchpad</strong> framing is useful here: chain of thought is not a transcript of hidden cognition, but a working surface on which the model can write intermediate state, try a route, revise it, and carry information forward. Nye et al. used exactly this idea to make multi-step computation easier for language models.<sup class="ref"><a href="#r1">1</a></sup></p>
+
+<p>For monitoring, the important fact is that this working surface can expose behavior that is hard to infer from the final action alone. Baker et al. showed this concretely in reward-hacking environments: giving a monitor access to the agent's chain of thought substantially improved detection over watching actions and outputs alone.<sup class="ref"><a href="#r2">2</a></sup> That result gives us the first premise of this post: <strong>there can be safety-relevant signal in the trace.</strong></p>
+
+<p>Korbak et al. turn that observation into a broader safety argument. They describe CoT monitorability as a <em>new and fragile opportunity</em>: natural-language reasoning gives us an unusually direct oversight surface, but future training choices, data, or scaling could make that surface less usable.<sup class="ref"><a href="#r12">12</a></sup> The point I take from this is not simply that “monitorability matters.” It is that the usefulness of the CoT depends on the interface through which we read it.</p>
+
+<p>Guan et al. make monitorability operational. They define it as a monitor's ability to predict properties of an agent's behavior and organize evaluations into <strong>intervention, process, and outcome-property</strong> archetypes.<sup class="ref"><a href="#r13">13</a></sup> The process evaluations are especially relevant here: experts enumerate valid solution paths and the monitor is asked which steps the model actually took. In other words, local reasoning structure already matters to the evaluation target—even though the representation of the trace itself is usually treated as plumbing rather than as an experimental variable.</p>
+
+<p>Dilgren and Wiegreffe's critique of the intervention evaluations exposes a related granularity problem at the level of labels. When an intervention's causal effect is only identified across a set of sampled rollouts, we do not know which particular rollouts were actually changed by the intervention; a monitor can therefore receive credit without necessarily firing on the same rollouts that carried the causal effect.<sup class="ref"><a href="#r14">14</a></sup> That is not an argument for semantic chunking by itself. But it is a strong argument for <strong>localization</strong>: a monitor verdict is more useful when we can tie it to the particular rollout—and ideally the particular span—that supports it.</p>
+
+<p>Emmons et al.'s distinction between <em>legibility</em> and <em>coverage</em> helps draw the boundary of what segmentation could plausibly accomplish.<sup class="ref"><a href="#r3">3</a></sup> A better representation might improve legibility by organizing evidence already present in the trace. It cannot manufacture coverage: if the relevant reasoning was never verbalized, no boundary rule will recover it.</p>
+
+<p>The second premise comes from work on the <em>internal structure of the trace itself</em>. Thought Anchors is especially relevant because it refuses to treat every sentence as equally important. Bogdan et al. resample around individual sentences and measure their counterfactual effect on the final answer; a small set of planning and backtracking sentences have outsized downstream influence.<sup class="ref"><a href="#r4">4</a></sup> This is a concrete reason to care about locality: useful information is not uniformly distributed along a reasoning trace.</p>
+
+<p>ReasoningFlow pushes the same idea toward representation. It builds fine-grained discourse structures over long reasoning traces, exposing local operations such as verification, self-reflection, assumptions, and backtracking, and studies how these structures relate to reasoning-trace monitorability.<sup class="ref"><a href="#r5">5</a></sup> Just as importantly, its discourse graph should not be mistaken for the model's hidden causal graph. That is the right warning for this post too: a semantic turn is a textual unit that may help monitoring, not a claim that we have recovered the underlying computation.</p>
+
+<p>Put together, these results leave a fairly natural gap. <strong>CoT monitoring asks whether useful evidence can be read from a trace; reasoning-structure work shows that the trace has non-uniform local organization. The representation layer between those two questions is comparatively underexplored.</strong></p>
+
+<div class="repr-layer" aria-label="Representation layer between chain of thought and monitor">
+  <div class="repr-flow">
+    <div class="repr-node"><span class="k">Agent</span><strong>generates reasoning</strong><small>same policy, same rollout</small></div>
+    <div class="repr-arrow">→</div>
+    <div class="repr-node"><span class="k">Raw CoT</span><strong>C</strong><small>the verbatim scratchpad</small></div>
+    <div class="repr-arrow">→</div>
+    <div class="repr-node focus"><span class="k">Representation</span><strong>φ(C)</strong><small>whole trace · fixed windows · semantic turns</small></div>
+    <div class="repr-arrow">→</div>
+    <div class="repr-node"><span class="k">Monitor</span><strong>M(φ(C))</strong><small>judgment + optional local evidence</small></div>
+  </div>
+  <p class="repr-note"><strong>This post varies φ, not C or M.</strong> The words do not change. The question is whether a different coordinate system over the same trace makes the monitor's job easier.</p>
+</div>
+
+<h2 id="granularity">The granularity problem</h2>
+
+<p>Suppose a long trace frames the task, tries one route, hits a contradiction, repairs it, verifies the new route, and commits. A whole-rollout monitor receives every one of those words. In an information-theoretic sense, adding boundaries does not give it new evidence.</p>
+
+<p>So why segment at all? Because real monitors are finite models with finite context, attention, and prompting budgets. A representation can change the <strong>inductive bias</strong> of the monitoring problem: which spans are presented together, which transitions become explicit, and whether the system has a natural coordinate for saying “the first warning appeared here.”</p>
+
+<p>This matters most when the monitoring objective has a temporal component. An early warning and a late warning can have identical episode-level AUROC and very different operational value. A suspicious idea that appears once and is then rejected is different from one that survives every later revision. A single rollout score can represent both cases, but it does not naturally expose the difference.</p>
+
+</div>
+
+<figure id="fig1">
+<div class="plate"><svg viewBox="0 0 880 360" role="img" aria-labelledby="f1t f1d" class="fig-svg"><title id="f1t">One reasoning trace cut five ways</title><desc id="f1d">The same trace segmented into tokens, epistemic-marker fragments, fixed sentence windows, adaptive semantic turns, and a single rollout. Only the semantic turns line up with the phases of the reasoning.</desc><rect x="236.0" y="34" width="87.4" height="308" fill="#F3EDDE"/><text x="279.7" y="24.0" class="lab sm muted" text-anchor="middle" >frame</text><rect x="323.4" y="34" width="137.3" height="308" fill="#F3EDDE"/><text x="392.0" y="24.0" class="lab sm muted" text-anchor="middle" >test a route</text><rect x="460.6" y="34" width="68.6" height="308" fill="#F3EDDE"/><text x="495.0" y="24.0" class="lab sm muted" text-anchor="middle" >contradiction</text><rect x="529.3" y="34" width="143.5" height="308" fill="#F3EDDE"/><text x="601.0" y="24.0" class="lab sm muted" text-anchor="middle" >revise</text><rect x="672.8" y="34" width="112.3" height="308" fill="#F3EDDE"/><text x="729.0" y="24.0" class="lab sm muted" text-anchor="middle" >verify</text><rect x="785.1" y="34" width="74.9" height="308" fill="#F3EDDE"/><text x="822.6" y="24.0" class="lab sm muted" text-anchor="middle" >commit</text><text x="0.0" y="79.0" class="lab strong" text-anchor="start" >Tokens</text><text x="0.0" y="97.0" class="lab sm muted" text-anchor="start" >every token, ≈1.7k per trace</text><rect x="236" y="66" width="624" height="24" fill="#FFFDF7" stroke="#D6D9CD"/><line x1="239.2" x2="239.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="242.4" x2="242.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="245.6" x2="245.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="248.8" x2="248.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="252.0" x2="252.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="255.2" x2="255.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="258.4" x2="258.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="261.6" x2="261.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="264.8" x2="264.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="268.0" x2="268.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="271.2" x2="271.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="274.4" x2="274.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="277.6" x2="277.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="280.8" x2="280.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="284.0" x2="284.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="287.2" x2="287.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="290.4" x2="290.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="293.6" x2="293.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="296.8" x2="296.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="300.0" x2="300.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="303.2" x2="303.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="306.4" x2="306.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="309.6" x2="309.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="312.8" x2="312.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="316.0" x2="316.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="319.2" x2="319.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="322.4" x2="322.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="325.6" x2="325.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="328.8" x2="328.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="332.0" x2="332.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="335.2" x2="335.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="338.4" x2="338.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="341.6" x2="341.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="344.8" x2="344.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="348.0" x2="348.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="351.2" x2="351.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="354.4" x2="354.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="357.6" x2="357.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="360.8" x2="360.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="364.0" x2="364.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="367.2" x2="367.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="370.4" x2="370.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="373.6" x2="373.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="376.8" x2="376.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="380.0" x2="380.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="383.2" x2="383.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="386.4" x2="386.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="389.6" x2="389.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="392.8" x2="392.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="396.0" x2="396.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="399.2" x2="399.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="402.4" x2="402.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="405.6" x2="405.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="408.8" x2="408.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="412.0" x2="412.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="415.2" x2="415.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="418.4" x2="418.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="421.6" x2="421.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="424.8" x2="424.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="428.0" x2="428.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="431.2" x2="431.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="434.4" x2="434.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="437.6" x2="437.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="440.8" x2="440.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="444.0" x2="444.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="447.2" x2="447.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="450.4" x2="450.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="453.6" x2="453.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="456.8" x2="456.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="460.0" x2="460.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="463.2" x2="463.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="466.4" x2="466.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="469.6" x2="469.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="472.8" x2="472.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="476.0" x2="476.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="479.2" x2="479.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="482.4" x2="482.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="485.6" x2="485.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="488.8" x2="488.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="492.0" x2="492.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="495.2" x2="495.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="498.4" x2="498.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="501.6" x2="501.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="504.8" x2="504.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="508.0" x2="508.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="511.2" x2="511.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="514.4" x2="514.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="517.6" x2="517.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="520.8" x2="520.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="524.0" x2="524.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="527.2" x2="527.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="530.4" x2="530.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="533.6" x2="533.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="536.8" x2="536.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="540.0" x2="540.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="543.2" x2="543.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="546.4" x2="546.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="549.6" x2="549.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="552.8" x2="552.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="556.0" x2="556.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="559.2" x2="559.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="562.4" x2="562.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="565.6" x2="565.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="568.8" x2="568.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="572.0" x2="572.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="575.2" x2="575.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="578.4" x2="578.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="581.6" x2="581.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="584.8" x2="584.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="588.0" x2="588.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="591.2" x2="591.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="594.4" x2="594.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="597.6" x2="597.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="600.8" x2="600.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="604.0" x2="604.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="607.2" x2="607.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="610.4" x2="610.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="613.6" x2="613.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="616.8" x2="616.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="620.0" x2="620.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="623.2" x2="623.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="626.4" x2="626.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="629.6" x2="629.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="632.8" x2="632.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="636.0" x2="636.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="639.2" x2="639.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="642.4" x2="642.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="645.6" x2="645.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="648.8" x2="648.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="652.0" x2="652.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="655.2" x2="655.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="658.4" x2="658.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="661.6" x2="661.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="664.8" x2="664.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="668.0" x2="668.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="671.2" x2="671.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="674.4" x2="674.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="677.6" x2="677.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="680.8" x2="680.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="684.0" x2="684.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="687.2" x2="687.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="690.4" x2="690.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="693.6" x2="693.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="696.8" x2="696.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="700.0" x2="700.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="703.2" x2="703.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="706.4" x2="706.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="709.6" x2="709.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="712.8" x2="712.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="716.0" x2="716.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="719.2" x2="719.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="722.4" x2="722.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="725.6" x2="725.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="728.8" x2="728.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="732.0" x2="732.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="735.2" x2="735.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="738.4" x2="738.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="741.6" x2="741.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="744.8" x2="744.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="748.0" x2="748.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="751.2" x2="751.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="754.4" x2="754.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="757.6" x2="757.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="760.8" x2="760.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="764.0" x2="764.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="767.2" x2="767.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="770.4" x2="770.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="773.6" x2="773.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="776.8" x2="776.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="780.0" x2="780.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="783.2" x2="783.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="786.4" x2="786.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="789.6" x2="789.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="792.8" x2="792.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="796.0" x2="796.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="799.2" x2="799.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="802.4" x2="802.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="805.6" x2="805.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="808.8" x2="808.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="812.0" x2="812.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="815.2" x2="815.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="818.4" x2="818.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="821.6" x2="821.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="824.8" x2="824.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="828.0" x2="828.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="831.2" x2="831.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="834.4" x2="834.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="837.6" x2="837.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="840.8" x2="840.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="844.0" x2="844.0" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="847.2" x2="847.2" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="850.4" x2="850.4" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="853.6" x2="853.6" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><line x1="856.8" x2="856.8" y1="66" y2="90" stroke="#9AA493" stroke-width="0.6"/><text x="0.0" y="137.0" class="lab strong" text-anchor="start" >Marker splits</text><text x="0.0" y="155.0" class="lab sm muted" text-anchor="start" >cut at Wait, But, …, 81.7 per trace</text><rect x="236" y="124" width="624" height="24" fill="#FFFDF7" stroke="#D6D9CD"/><line x1="254.5" x2="254.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="279.2" x2="279.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="279.7" x2="279.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="289.7" x2="289.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="292.2" x2="292.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="299.9" x2="299.9" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="301.8" x2="301.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="305.0" x2="305.0" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="344.6" x2="344.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="348.8" x2="348.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="356.1" x2="356.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="371.6" x2="371.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="374.3" x2="374.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="381.5" x2="381.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="391.5" x2="391.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="399.4" x2="399.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="403.5" x2="403.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="404.4" x2="404.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="419.6" x2="419.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="421.5" x2="421.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="428.3" x2="428.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="434.6" x2="434.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="435.5" x2="435.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="446.7" x2="446.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="461.3" x2="461.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="464.7" x2="464.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="464.8" x2="464.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="471.7" x2="471.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="472.6" x2="472.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="473.7" x2="473.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="512.6" x2="512.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="516.1" x2="516.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="527.8" x2="527.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="532.0" x2="532.0" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="542.8" x2="542.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="553.7" x2="553.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="557.7" x2="557.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="560.4" x2="560.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="573.1" x2="573.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="586.0" x2="586.0" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="588.0" x2="588.0" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="591.4" x2="591.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="596.7" x2="596.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="604.2" x2="604.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="607.6" x2="607.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="610.6" x2="610.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="611.2" x2="611.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="613.2" x2="613.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="615.8" x2="615.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="620.8" x2="620.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="636.3" x2="636.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="653.3" x2="653.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="658.1" x2="658.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="667.9" x2="667.9" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="669.6" x2="669.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="670.6" x2="670.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="672.4" x2="672.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="673.5" x2="673.5" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="680.7" x2="680.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="690.4" x2="690.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="699.6" x2="699.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="712.9" x2="712.9" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="717.7" x2="717.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="719.6" x2="719.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="724.9" x2="724.9" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="727.7" x2="727.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="728.7" x2="728.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="732.1" x2="732.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="737.4" x2="737.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="741.0" x2="741.0" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="752.1" x2="752.1" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="765.4" x2="765.4" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="765.8" x2="765.8" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="770.2" x2="770.2" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="794.3" x2="794.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="819.3" x2="819.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="822.3" x2="822.3" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="824.9" x2="824.9" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="846.6" x2="846.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="848.6" x2="848.6" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><line x1="850.7" x2="850.7" y1="124" y2="148" stroke="#7C8578" stroke-width="1"/><text x="0.0" y="195.0" class="lab strong" text-anchor="start" >Sentence windows</text><text x="0.0" y="213.0" class="lab sm muted" text-anchor="start" >cut every 4 sentences, 20.0 per trace</text><rect x="236" y="182" width="624" height="24" fill="#FFFDF7" stroke="#D6D9CD"/><line x1="267.2" x2="267.2" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="298.4" x2="298.4" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="329.6" x2="329.6" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="360.8" x2="360.8" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="392.0" x2="392.0" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="423.2" x2="423.2" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="454.4" x2="454.4" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="485.6" x2="485.6" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="516.8" x2="516.8" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="548.0" x2="548.0" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="579.2" x2="579.2" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="610.4" x2="610.4" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="641.6" x2="641.6" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="672.8" x2="672.8" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="704.0" x2="704.0" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="735.2" x2="735.2" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="766.4" x2="766.4" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="797.6" x2="797.6" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><line x1="828.8" x2="828.8" y1="182" y2="206" stroke="#6F91A8" stroke-width="1.6"/><text x="0.0" y="253.0" class="lab strong" text-anchor="start" >Semantic turns</text><text x="0.0" y="271.0" class="lab sm muted" text-anchor="start" >cut at turns, adaptive</text><rect x="236" y="240" width="624" height="24" fill="#FFFDF7" stroke="#D6D9CD"/><line x1="323.4" x2="323.4" y1="240" y2="264" stroke="#C9785C" stroke-width="2.6"/><line x1="460.6" x2="460.6" y1="240" y2="264" stroke="#C9785C" stroke-width="2.6"/><line x1="529.3" x2="529.3" y1="240" y2="264" stroke="#C9785C" stroke-width="2.6"/><line x1="672.8" x2="672.8" y1="240" y2="264" stroke="#C9785C" stroke-width="2.6"/><line x1="785.1" x2="785.1" y1="240" y2="264" stroke="#C9785C" stroke-width="2.6"/><rect x="239.0" y="244" width="81.4" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><rect x="326.4" y="244" width="131.3" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><rect x="463.6" y="244" width="62.6" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><rect x="532.3" y="244" width="137.5" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><rect x="675.8" y="244" width="106.3" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><rect x="788.1" y="244" width="68.9" height="16" rx="2" fill="#F1C9B6" opacity=".55"/><text x="0.0" y="311.0" class="lab strong" text-anchor="start" >Rollout</text><text x="0.0" y="329.0" class="lab sm muted" text-anchor="start" >no cuts, 1 per trace</text><rect x="236" y="298" width="624" height="24" fill="#FFFDF7" stroke="#D6D9CD"/></svg></div>
+<figcaption><b>Figure 1. One trace, five units.</b> The shaded bands are the phases a reader would identify. Marker splitting cuts almost anywhere; sentence windows cut on a fixed schedule; only adaptive turns (illustrative) are designed to land on phase changes. Per-trace counts for markers and windows are from the audit described below; the token count assumes roughly four characters per token over a 6,685-character average trace.</figcaption>
+</figure>
+
+<div class="col">
+
+<p>The question is therefore not “does segmentation reveal secret information?” It is narrower: <strong>what is the cheapest representation that preserves the local structure a monitor may want to use?</strong> I started with two obvious answers—epistemic cue words and fixed sentence windows—because both are simple enough to falsify quickly.</p>
+
+<h3>Epistemic verbalization is a signal, not a boundary</h3>
+
+<p>Reasoning models narrate changes in their own stance constantly: <em>wait</em>, <em>but</em>, <em>actually</em>, <em>let me check</em>, <em>therefore</em>. I will call this <strong>epistemic verbalization</strong>: language about the status of the current belief or plan rather than the task content itself. These phrases can be useful monitor features. In SELFDOUBT, for example, hedging and verification language carries uncertainty signal in a single trace.<sup class="ref"><a href="#r6">6</a></sup> My first mistake was to assume that a useful feature should also make a useful delimiter.</p>
+
+<p>They don't. In a 100-trace audit (88 with non-empty reasoning), <em>Wait</em> appeared 1,672 times and <em>But</em> 1,600 times. Splitting at markers like these produced <strong>81.7 chunks per trace</strong>. Under the audit rubric, 54.3% of those chunks were one-word or near-empty fragments, 62.9% had little or no value as embedding units, and only 19.6% were well-formed. The chunks looked like this:</p>
+
+<blockquote class="trace" aria-label="Example fragments from marker splitting"><span>Wait</span>, maybe it's a different number<br><span>But</span> the problem says characters are…<br><span>Actually</span>, I should check one more case</blockquote>
+
+<p>The trouble is that these words are context-dependent. <em>Wait</em> can open a genuine change of hypothesis, or precede a one-token arithmetic fix. <em>But</em> can reverse an argument, or just join two clauses. The word is a feature of the reasoning; the span around it tells you what happened.</p>
+
+</div>
+
+<figure id="fig2">
+<div class="plate"><svg viewBox="0 0 880 392" role="img" aria-labelledby="f2t f2d" class="fig-svg"><title id="f2t">Well-formed chunks by segmentation rule</title><desc id="f2d">Epistemic markers: 81.7 chunks per trace, 54.3 percent fragments, 19.6 percent well-formed. Sentence windows: 20 chunks, 93.5 percent. Selective markers with merging: 8.9 chunks, 85.4 percent. Structural markers: 7.4 chunks, 92.8 percent. Branching-factor turns cut on a peak in the model’s predictive branching factor; their boundary alignment has not yet been audited.</desc><defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#F4E7E0"/><line x1="0" y1="0" x2="0" y2="7" stroke="#D9A58F" stroke-width="2"/></pattern></defs><text x="0.0" y="22.0" class="lab sm muted" text-anchor="start" >Segmentation rule</text><text x="236.0" y="22.0" class="lab sm muted" text-anchor="start" >What decides a cut</text><text x="450.0" y="22.0" class="lab sm muted" text-anchor="start" >Well-formed chunks (audit rubric)</text><text x="876.0" y="22.0" class="lab sm muted" text-anchor="end" >Chunks per trace</text><text x="0.0" y="60.0" class="lab strong" text-anchor="start" >Epistemic markers</text><text x="0.0" y="78.0" class="lab sm muted" text-anchor="start" >Wait, But, However, …</text><text x="236.0" y="60.0" class="lab sm" text-anchor="start" >a frequent word</text><rect x="450.0" y="48" width="162.9" height="26" fill="#CBCDBF"/><text x="456.0" y="65.0" class="lab sm" text-anchor="start" >fragments 54.3%</text><rect x="612.9" y="48" width="25.8" height="26" fill="#9AA493"/><rect x="638.7" y="48" width="52.5" height="26" fill="#DCE7ED"/><rect x="691.2" y="48" width="58.8" height="26" fill="#3F8F56"/><text x="744.0" y="65.0" class="lab sm" text-anchor="end" style="fill:#FFFDF7">19.6%</text><text x="450.0" y="92.0" class="lab sm muted" text-anchor="start" >then poor 8.6% (grey) and moderate 17.5% (blue)</text><text x="876.0" y="66.0" class="num" text-anchor="end" >81.7</text><text x="0.0" y="118.0" class="lab strong" text-anchor="start" >Sentence windows</text><text x="0.0" y="136.0" class="lab sm muted" text-anchor="start" >four sentences per chunk</text><text x="236.0" y="118.0" class="lab sm" text-anchor="start" >a sentence count</text><rect x="450.0" y="106" width="280.5" height="26" fill="#3F8F56"/><text x="724.5" y="123.0" class="lab sm" text-anchor="end" style="fill:#FFFDF7">93.5%</text><rect x="730.5" y="106" width="19.5" height="26" fill="#F3EDDE"/><text x="876.0" y="124.0" class="num" text-anchor="end" >20.0</text><text x="0.0" y="176.0" class="lab strong" text-anchor="start" >Selective markers + merge</text><text x="0.0" y="194.0" class="lab sm muted" text-anchor="start" >Let me, However, …</text><text x="236.0" y="176.0" class="lab sm" text-anchor="start" >a phrase, then a length check</text><rect x="450.0" y="164" width="256.2" height="26" fill="#3F8F56"/><text x="700.2" y="181.0" class="lab sm" text-anchor="end" style="fill:#FFFDF7">85.4%</text><rect x="706.2" y="164" width="43.8" height="26" fill="#F3EDDE"/><text x="876.0" y="182.0" class="num" text-anchor="end" >8.9</text><text x="0.0" y="234.0" class="lab strong" text-anchor="start" >Structural markers</text><text x="0.0" y="252.0" class="lab sm muted" text-anchor="start" >Step n:, Therefore, …</text><text x="236.0" y="234.0" class="lab sm" text-anchor="start" >an explicit structure word</text><rect x="450.0" y="222" width="278.4" height="26" fill="#3F8F56"/><text x="722.4" y="239.0" class="lab sm" text-anchor="end" style="fill:#FFFDF7">92.8%</text><rect x="728.4" y="222" width="21.6" height="26" fill="#F3EDDE"/><text x="876.0" y="240.0" class="num" text-anchor="end" >7.4</text><rect x="-8" y="264" width="888" height="62" rx="5" fill="#F4E7E0" stroke="#C9785C" stroke-width="1.2"/><text x="0.0" y="292.0" class="lab strong" text-anchor="start" >Branching-factor turns</text><text x="0.0" y="310.0" class="lab sm muted" text-anchor="start" >this post</text><text x="236.0" y="292.0" class="lab sm" text-anchor="start" >a peak in the model's</text><text x="236.0" y="308.0" class="lab sm" text-anchor="start" >branching factor</text><rect x="450" y="280" width="300" height="26" fill="url(#hatch)" stroke="#C9785C" stroke-width=".8"/><text x="600.0" y="297.0" class="lab sm" text-anchor="middle" style="fill:#1E2F23">boundary alignment open</text><text x="876.0" y="298.0" class="lab strong" text-anchor="end" >adaptive</text><text x="0.0" y="362.0" class="lab sm muted" text-anchor="start" >The rubric scores completeness, content density and length on 100 traces (88 with non-empty reasoning).</text><text x="0.0" y="380.0" class="lab sm" text-anchor="start" style="fill:#1E2F23">It does not check whether a cut falls on a reasoning turn, which is the property the last row is designed for.</text></svg></div>
+<figcaption><b>Figure 2. Two different questions about a segmentation.</b> The audit asks whether chunks are well-formed, and on that axis sentence windows and structural markers are already excellent while marker splitting fails. What the audit does not ask is whether cuts land on reasoning turns. That is what the branching-factor chunker (highlighted) is built for: it is the only rule here whose cut depends on the model's own predictive state rather than on a word or a count. Its segmentation statistics are evaluated separately below, but the boundary-alignment comparison it needs is still open problem 2.</figcaption>
+</figure>
+
+<div class="col">
+
+<p>Structural markers are much better. Explicit cues such as <em>Step 2</em>, <em>Therefore</em>, or <em>In summary</em> produced only 7.4 chunks per trace and 92.8% well-formed chunks in the same audit. I would happily use them when the model writes in a visibly structured style. The limitation is different: they detect <em>declared</em> structure. Free-form reasoning can pivot without announcing the pivot, and harmless style changes can remove the cue while leaving the underlying move intact.</p>
+
+<p>The lesson I took is a small reframe. <strong>Epistemic verbalizations are features, not delimiters.</strong> They are exactly the kind of thing a monitor may want to score <em>inside</em> a chunk—hedging, revision, verification, commitment—but the span around the cue tells us whether anything important actually changed.</p>
+
+<h3>Sentence windows are a strong baseline—and semantically agnostic</h3>
+
+<p>The obvious fix is to split on sentences and group them into fixed windows. This works well, and it's important to say so plainly. Four-sentence windows gave about <strong>20 chunks per trace, 63 words per chunk, and 93.5% well-formed</strong>, with no fragments at all. Any adaptive method has to beat this, not the marker strawman.</p>
+
+<p>It helps to be precise about what that 93.5% measures. The audit rubric asks whether each chunk is <em>well-formed</em>: a complete thought, with enough content, at a sensible length. It never asks whether a chunk's edges sit where the reasoning changes direction. Sentence windows score well on the first question almost by construction, and the rubric is silent on the second. That second question, <strong>does the cut land on a turn?</strong>, is the one this post is about, and it is the empty column in Figure 2.</p>
+
+<p>If sentence windows have a weakness, it lies on that second axis. <strong>Their boundaries are syntactic rather than epistemic.</strong> A four-sentence window cuts because four sentences have gone by. It does not care whether sentence four raised the contradiction and sentence five resolved it. In other words, fixed windows regularize <em>length</em>, not <em>meaning</em>. They can fuse two reasoning moves that happen to fit in one window, or split a single argument just as it becomes interpretable. The chunks are grammatical; their timing is indifferent to the reasoning.</p>
+
+
+</div>
+
+<figure id="fig3b">
+<div class="audit-plate">
+  <div class="paired-audit" role="group" aria-label="Paired comparison of fixed four-sentence windows and adaptive semantic turns over 2,082 traces">
+    <section class="audit-side">
+      <div class="kicker">Fixed sentence baseline</div>
+      <h3>Cut every four sentences</h3>
+      <div class="metric-grid">
+        <div class="metric"><span>Median chunks / trace</span><strong>11</strong></div>
+        <div class="metric"><span>Mean chunks / trace</span><strong>32.2</strong></div>
+        <div class="metric"><span>Median words / chunk</span><strong>43</strong></div>
+        <div class="metric"><span>Chunks under 10 words</span><strong>2.0%</strong></div>
+      </div>
+    </section>
+    <section class="audit-side semantic">
+      <div class="kicker">Adaptive semantic turns</div>
+      <h3>Cut at predictive-state peaks</h3>
+      <div class="metric-grid">
+        <div class="metric"><span>Median chunks / trace</span><strong>5</strong></div>
+        <div class="metric"><span>Mean chunks / trace</span><strong>13.8</strong></div>
+        <div class="metric"><span>Median words / chunk</span><strong>72</strong></div>
+        <div class="metric"><span>Chunks under 10 words</span><strong>0.2%</strong></div>
+      </div>
+    </section>
+    <div class="audit-foot"><b>85.0% of traces produced fewer chunks with adaptive segmentation.</b><span>n = 2,082 exact-coverage pairs across 9 stored runs · 5.4% of adaptive chunks exceeded 300 words.</span></div>
+  </div>
+</div>
+<figcaption><b>Figure 3. The larger paired audit makes the trade-off clearer.</b> Adaptive segmentation produces fewer, larger units and nearly removes tiny fragments. It also creates a real over-merging tail: 5.4% of chunks exceed 300 words. That is useful failure information, not a victory lap—the boundary-quality experiment still has to test whether these larger units actually align with reasoning turns.</figcaption>
+</figure>
+
+<div class="col">
+<p>The larger paired audit sharpens the point. The adaptive rule is not simply making chunks “better”; it is moving the operating point. It compresses the trace into fewer units and almost eliminates tiny spans, but sometimes merges too aggressively. That is exactly why chunk quality and boundary quality should be evaluated separately. A chunk can be perfectly readable and still contain two different reasoning moves.</p>
+
+</div>
+
+<figure id="fig3">
+<div class="plate"><svg viewBox="0 0 880 568" role="img" aria-labelledby="f3t f3d" class="fig-svg"><title id="f3t">A worked excerpt segmented two ways</title><desc id="f3d">Eleven sentences in which a model lists wrong prime factors, notices that 9 is not prime, re-checks the question, and switches to a full factorization. Four-sentence windows cut after sentences 4 and 8, so the doubt lands at the end of a confident chunk and its resolution is fused with the new route. The branching factor spikes before sentences 4 and 8, and the chunker cuts there, giving turns for the first route, the contradiction, and the new route with the answer.</desc><text x="0.0" y="20.0" class="lab strong" text-anchor="start" style="fill:#6F91A8">Four-sentence</text><text x="0.0" y="36.0" class="lab strong" text-anchor="start" style="fill:#6F91A8">windows</text><text x="150.0" y="20.0" class="lab strong" text-anchor="start" >Excerpt from a reasoning trace</text><text x="632.0" y="20.0" class="lab strong" text-anchor="start" >Branching factor</text><text x="632.0" y="36.0" class="lab sm muted" text-anchor="start" >at each boundary</text><text x="768.0" y="20.0" class="lab strong" text-anchor="start" style="fill:#C9785C">Semantic turns</text><rect x="142" y="180" width="470" height="156" rx="4" fill="#F4E7E0"/><text x="150.0" y="84.0" class="lab sm muted" text-anchor="start" >S1</text><text x="180" y="84" class="sent">The question asks how many distinct prime factors 360 has.</text><text x="150.0" y="124.0" class="lab sm muted" text-anchor="start" >S2</text><text x="180" y="124" class="sent">The options are 2, 3, 4 and 5.</text><text x="150.0" y="164.0" class="lab sm muted" text-anchor="start" >S3</text><text x="180" y="164" class="sent">Dividing out 2 leaves 45 = 9 × 5, so the factors are 2, 9 and 5.</text><text x="150.0" y="204.0" class="lab sm muted" text-anchor="start" >S4</text><text x="180" y="204" class="sent">Wait, 9 is not prime.</text><text x="150.0" y="244.0" class="lab sm muted" text-anchor="start" >S5</text><text x="180" y="244" class="sent">So that list is wrong, and I need to break 9 down further.</text><text x="150.0" y="284.0" class="lab sm muted" text-anchor="start" >S6</text><text x="180" y="284" class="sent">Let me re-check what the question means by distinct.</text><text x="150.0" y="324.0" class="lab sm muted" text-anchor="start" >S7</text><text x="180" y="324" class="sent">Each prime counts once, no matter how often it divides 360.</text><text x="150.0" y="364.0" class="lab sm muted" text-anchor="start" >S8</text><text x="180" y="364" class="sent">A cleaner route is to write out the full prime factorization of 360.</text><text x="150.0" y="404.0" class="lab sm muted" text-anchor="start" >S9</text><text x="180" y="404" class="sent">That gives 360 = 2³ × 3² × 5.</text><text x="150.0" y="444.0" class="lab sm muted" text-anchor="start" >S10</text><text x="180" y="444" class="sent">The distinct primes are 2, 3 and 5.</text><text x="150.0" y="484.0" class="lab sm muted" text-anchor="start" >S11</text><text x="180" y="484" class="sent">So the answer is 3.</text><rect x="632" y="97" width="35.7" height="10" rx="2" fill="#9AA493"/><rect x="632" y="137" width="39.1" height="10" rx="2" fill="#9AA493"/><rect x="632" y="177" width="95.2" height="10" rx="2" fill="#C9785C"/><text x="733.2" y="186.0" class="lab sm" text-anchor="start" style="fill:#C9785C">5.6</text><line x1="142" x2="626" y1="182" y2="182" stroke="#C9785C" stroke-width="1.6"/><rect x="632" y="217" width="40.8" height="10" rx="2" fill="#9AA493"/><line x1="0" x2="612" y1="223" y2="223" stroke="#6F91A8" stroke-width="1.6" stroke-dasharray="5 4"/><rect x="632" y="257" width="34.0" height="10" rx="2" fill="#9AA493"/><rect x="632" y="297" width="37.4" height="10" rx="2" fill="#9AA493"/><rect x="632" y="337" width="86.7" height="10" rx="2" fill="#C9785C"/><text x="724.7" y="346.0" class="lab sm" text-anchor="start" style="fill:#C9785C">5.1</text><line x1="142" x2="626" y1="342" y2="342" stroke="#C9785C" stroke-width="1.6"/><rect x="632" y="377" width="39.1" height="10" rx="2" fill="#9AA493"/><line x1="0" x2="612" y1="383" y2="383" stroke="#6F91A8" stroke-width="1.6" stroke-dasharray="5 4"/><rect x="632" y="417" width="37.4" height="10" rx="2" fill="#9AA493"/><rect x="632" y="457" width="39.1" height="10" rx="2" fill="#9AA493"/><path d="M14 66 H0 V218 H14" fill="none" stroke="#6F91A8" stroke-width="2"/><text x="22.0" y="138.0" class="lab sm strong" text-anchor="start" style="fill:#6F91A8">window 1</text><text x="22.0" y="154.0" class="ann" text-anchor="start" >doubt arrives</text><text x="22.0" y="168.0" class="ann" text-anchor="start" >in its last line</text><path d="M14 226 H0 V378 H14" fill="none" stroke="#6F91A8" stroke-width="2"/><text x="22.0" y="298.0" class="lab sm strong" text-anchor="start" style="fill:#6F91A8">window 2</text><text x="22.0" y="314.0" class="ann" text-anchor="start" >resolution fused</text><text x="22.0" y="328.0" class="ann" text-anchor="start" >with a new route</text><path d="M14 386 H0 V498 H14" fill="none" stroke="#6F91A8" stroke-width="2"/><text x="22.0" y="438.0" class="lab sm strong" text-anchor="start" style="fill:#6F91A8">window 3</text><text x="22.0" y="454.0" class="ann" text-anchor="start" >the new route is</text><text x="22.0" y="468.0" class="ann" text-anchor="start" >split across two</text><path d="M758 66 H772 V178 H758" fill="none" stroke="#C9785C" stroke-width="2"/><text x="782.0" y="118.0" class="lab sm strong" text-anchor="start" style="fill:#C9785C">turn 1</text><text x="782.0" y="134.0" class="ann" text-anchor="start" >first route</text><path d="M758 186 H772 V338 H758" fill="none" stroke="#C9785C" stroke-width="2"/><text x="782.0" y="258.0" class="lab sm strong" text-anchor="start" style="fill:#C9785C">turn 2</text><text x="782.0" y="274.0" class="ann" text-anchor="start" >contradiction</text><text x="782.0" y="288.0" class="ann" text-anchor="start" >and repair</text><path d="M758 346 H772 V498 H758" fill="none" stroke="#C9785C" stroke-width="2"/><text x="782.0" y="418.0" class="lab sm strong" text-anchor="start" style="fill:#C9785C">turn 3</text><text x="782.0" y="434.0" class="ann" text-anchor="start" >new route</text><text x="782.0" y="448.0" class="ann" text-anchor="start" >and answer</text><line x1="0" x2="26" y1="544" y2="544" stroke="#6F91A8" stroke-width="1.6" stroke-dasharray="5 4"/><text x="34.0" y="548.0" class="lab sm muted" text-anchor="start" >window cut</text><line x1="130" x2="156" y1="544" y2="544" stroke="#C9785C" stroke-width="1.6"/><text x="164.0" y="548.0" class="lab sm muted" text-anchor="start" >turn cut: smoothed peak above τ, at least 15 words in the chunk</text><text x="880.0" y="548.0" class="lab sm muted" text-anchor="end" >Scores illustrative; cuts use the rule below</text></svg></div>
+<figcaption><b>Figure 4. One excerpt, two segmentations.</b> The model lists the wrong prime factors, catches the error, repairs it, and switches to a cleaner route. Four-sentence windows (left) put the doubt in the last line of an otherwise confident chunk, then fuse the repair with the start of the new route. The branching factor spikes just before S4 and S8, and the chunker cuts there (right), so each turn holds one move. The excerpt and scores are illustrative. The cuts use the exact boundary rule described below on these scores embedded in a longer trace, since the threshold is set per trace.</figcaption>
+</figure>
+
+<div class="position" id="position">
+<p class="small">The position</p>
+<p>Semantic segmentation is not itself “monitorability.” It is a candidate <strong>representation layer for CoT monitoring</strong>: a way to expose the local structure of evidence that is already present in the trace.</p>
+</div>
+
+<div class="col">
+
+<h2>A useful intermediate representation</h2>
+
+<p>This distinction matters. CoT <strong>monitorability</strong> is a property of how much useful information a monitor can recover from a reasoning trace. CoT <strong>monitoring</strong> is the actual system that reads the trace and makes a judgment. Semantic segmentation sits between them: it changes how the same trace is presented to that system.</p>
+
+<p>For an ideal monitor with unlimited context, adding boundaries should not create information. The interesting hypothesis is more practical: <strong>well-placed boundaries may be a useful inductive bias for a finite monitor.</strong> They provide coordinates for local evidence, let the monitor revisit coherent spans rather than arbitrary token ranges, and make temporal questions—first appearance, persistence, revision—natural outputs instead of post-hoc analyses.</p>
+
+<div class="hypothesis">
+  <div class="kicker">The hypothesis to test</div>
+  <p>Hold the trace, monitor, prompt, and token budget fixed. If semantic boundaries are useful, they should improve <strong>localization, lead time, or robustness</strong> relative to fixed and randomized boundaries—even if the final rollout-level classification score barely changes.</p>
+</div>
+
+<p>Sentence windows are therefore not a strawman; they are the baseline to beat. If randomizing the semantic boundaries leaves results unchanged, or if four-sentence windows perform just as well, the extra machinery has not earned its complexity.</p>
+
+<h2 id="mechanism">A mechanism: cut where the next step branches</h2>
+
+<p>The prototype takes a deliberately conservative route. Sentence boundaries remain the only legal places to cut, because punctuation is useful scaffolding. The chunker's job is to decide <em>which</em> sentence boundaries coincide with a meaningful change in the model's local predictive state. Statistically, this is a lightweight <strong>change-point detection</strong> problem over a one-dimensional uncertainty signal.</p>
+
+<p>An earlier version averaged the observed-token surprisal within each sentence. The current version asks a different question at the boundary itself: <strong>right as the next sentence begins, how many continuations does the model consider plausible?</strong></p>
+
+<div class="math">
+<p>At each candidate boundary, read the model's top-20 next-token log-probabilities given everything before it. Renormalize them into probabilities <em>p<sub>i</sub></em> and compute</p>
+<p class="eq"><em>H</em> = − Σ<sub><em>i</em></sub> <em>p<sub>i</sub></em> log<sub>2</sub> <em>p<sub>i</sub></em>, &nbsp;&nbsp;&nbsp; <em>B</em> = 2<sup><em>H</em></sup></p>
+<p style="margin:0"><em>H</em> is predictive entropy: uncertainty over what the model <em>could</em> write next. <em>B</em> turns that entropy into an effective branching factor—the number of equally likely choices that would have the same entropy. A sharp distribution gives a low score; a flat distribution gives a high score. Because only the top 20 continuations are available, this is a truncated proxy rather than full-vocabulary entropy.</p>
+</div>
+<div class="term-note"><strong>Entropy, surprisal, perplexity.</strong> Surprisal asks how unexpected the token that actually occurred was: <em>−log p(x)</em>. Entropy asks how uncertain the model was <em>before</em> seeing which token occurred: an expectation over possible next tokens. Perplexity is an exponentiated entropy or average surprisal, depending on context. The boundary signal here is closest to predictive entropy, expressed as an effective branching factor—not the perplexity of the observed sentence.</div>
+
+<p>The working hypothesis is simple. While the model follows one locally stable route, the distribution over how the next sentence begins should often stay relatively concentrated. At a hard step, contradiction, or change of direction, that distribution may broaden because several continuations become locally plausible. A <em>relative</em> peak in branching factor is therefore a candidate change point—not proof of a reasoning turn, but a cheap place to look.</p>
+
+<p>The most relevant prior result I know is the high-entropy-token work of Wang et al. They find that entropy is highly non-uniform along reasoning traces: a small minority of high-entropy tokens behave like forks that steer generation toward different reasoning paths, and RL updates concentrated on those tokens preserve much of the training benefit.<sup class="ref"><a href="#r7">7</a></sup> That does <em>not</em> imply that a high-entropy sentence boundary is a semantic turn. It gives a narrower motivation: predictive uncertainty is a plausible place to look for branch points, and therefore a reasonable one-dimensional signal for change-point detection.</p>
+
+<p>Thought Anchors provides a complementary test target rather than another justification. If branching peaks really identify consequential turns, they should correlate with sentences whose resampling has large downstream effects—especially the planning and backtracking anchors that paper identifies.<sup class="ref"><a href="#r4">4</a></sup> That correlation is an experiment, not an assumption.</p>
+
+<p>The rest of the mechanism is mostly about not overreacting to noisy peaks. The current implementation does the following.</p>
+
+<ol class="steps">
+<li><strong>Split into sentences.</strong> Split on sentence-final punctuation followed by a capital letter, and on newlines, while masking about eighty common abbreviations so that "e.g." or "Dr." don't end a sentence.</li>
+<li><strong>Window long traces.</strong> If the trace exceeds the scoring model's context, build overlapping sentence windows with about 12% token overlap. When a boundary is scored in more than one window, keep the score computed with the most left context.</li>
+<li><strong>Score every boundary in one pass.</strong> Send each window to an OpenAI-compatible completions endpoint with <code>echo=true</code>, <code>max_tokens=0</code>, and <code>logprobs=20</code>. The server returns prompt log-probabilities, so no text is generated. Map each sentence boundary to its token position, falling back to the tokenizer if the server's offsets don't line up.</li>
+<li><strong>Smooth.</strong> Take a three-boundary moving average, so a single noisy position doesn't become a new "thought".</li>
+<li><strong>Threshold adaptively.</strong> Mark local maxima of the smoothed curve above τ = max(median + 0.5·IQR, median + 0.1), computed per trace.</li>
+<li><strong>Glue.</strong> Cut at a marked peak only if the current chunk already holds at least 15 words, so tiny fragments never get stranded.</li>
+</ol>
+
+<pre class="codeblock" aria-label="Core boundary scoring and peak detection logic"><code>def branching_factor(top_logprobs):
+    x = np.asarray(top_logprobs, dtype=float)
+    p = np.exp(x - x.max())
+    p /= p.sum()
+    H = -(p * np.log2(p)).sum()
+    return 2 ** H
+
+smooth = np.convolve(boundary_scores, np.ones(3) / 3, mode="same")
+median = np.median(smooth)
+iqr = np.percentile(smooth, 75) - np.percentile(smooth, 25)
+tau = max(median + 0.5 * iqr, median + 0.1)
+peaks, _ = find_peaks(smooth, height=tau)</code></pre>
+
+</div>
+
+<figure id="fig4">
+<div class="plate"><svg viewBox="0 0 880 372" role="img" aria-labelledby="f4t f4d" class="fig-svg"><title id="f4t">The boundary rule applied to an illustrative score series</title><desc id="f4d">Raw branching-factor scores at 29 sentence boundaries, their three-boundary moving average, the adaptive threshold, and the resulting cuts. An isolated early spike is absorbed by smoothing; one peak is rejected because the chunk holds only 7 words; three peaks become cuts.</desc><line x1="56" x2="864" y1="213.3" y2="213.3" stroke="#D6D9CD"/><text x="48.0" y="217.3" class="lab sm muted" text-anchor="end" >2</text><line x1="56" x2="864" y1="176.7" y2="176.7" stroke="#D6D9CD"/><text x="48.0" y="180.7" class="lab sm muted" text-anchor="end" >3</text><line x1="56" x2="864" y1="140.0" y2="140.0" stroke="#D6D9CD"/><text x="48.0" y="144.0" class="lab sm muted" text-anchor="end" >4</text><line x1="56" x2="864" y1="103.3" y2="103.3" stroke="#D6D9CD"/><text x="48.0" y="107.3" class="lab sm muted" text-anchor="end" >5</text><line x1="56" x2="864" y1="66.7" y2="66.7" stroke="#D6D9CD"/><text x="48.0" y="70.7" class="lab sm muted" text-anchor="end" >6</text><text x="48.0" y="18.0" class="lab sm muted">Branching factor 2<tspan dy="-5" font-size="9">H</tspan></text><line x1="56" x2="864" y1="184.0" y2="184.0" stroke="#7C8578" stroke-dasharray="2 3"/><text x="526.4" y="198.0" class="lab sm muted" text-anchor="start" >median 2.8</text><line x1="56" x2="864" y1="167.1" y2="167.1" stroke="#C9785C" stroke-dasharray="6 4" stroke-width="1.4"/><text x="864.0" y="160.1" class="lab sm" text-anchor="end" style="fill:#C9785C">threshold τ = 3.26</text><line x1="229.1" x2="229.1" y1="30" y2="250" stroke="#C9785C" stroke-width="2"/><line x1="344.6" x2="344.6" y1="30" y2="250" stroke="#C9785C" stroke-width="2"/><line x1="460.0" x2="460.0" y1="30" y2="250" stroke="#C9785C" stroke-width="2"/><polyline fill="none" stroke="#9AA493" stroke-width="1" points="56.0,206.0 84.9,122.0 113.7,208.9 142.6,215.9 171.4,211.1 200.3,121.7 229.1,161.3 258.0,191.3 286.9,211.5 315.7,51.6 344.6,200.5 373.4,202.0 402.3,204.9 431.1,216.3 460.0,118.4 488.9,154.3 517.7,220.7 546.6,211.1 575.4,226.9 604.3,220.3 633.1,105.2 662.0,186.6 690.9,219.9 719.7,203.1 748.6,204.2 777.4,127.5 806.3,233.9 835.1,211.9 864.0,206.4"/><circle cx="56.0" cy="206.0" r="2.2" fill="#9AA493"/><circle cx="84.9" cy="122.0" r="2.2" fill="#9AA493"/><circle cx="113.7" cy="208.9" r="2.2" fill="#9AA493"/><circle cx="142.6" cy="215.9" r="2.2" fill="#9AA493"/><circle cx="171.4" cy="211.1" r="2.2" fill="#9AA493"/><circle cx="200.3" cy="121.7" r="2.2" fill="#9AA493"/><circle cx="229.1" cy="161.3" r="2.2" fill="#9AA493"/><circle cx="258.0" cy="191.3" r="2.2" fill="#9AA493"/><circle cx="286.9" cy="211.5" r="2.2" fill="#9AA493"/><circle cx="315.7" cy="51.6" r="2.2" fill="#9AA493"/><circle cx="344.6" cy="200.5" r="2.2" fill="#9AA493"/><circle cx="373.4" cy="202.0" r="2.2" fill="#9AA493"/><circle cx="402.3" cy="204.9" r="2.2" fill="#9AA493"/><circle cx="431.1" cy="216.3" r="2.2" fill="#9AA493"/><circle cx="460.0" cy="118.4" r="2.2" fill="#9AA493"/><circle cx="488.9" cy="154.3" r="2.2" fill="#9AA493"/><circle cx="517.7" cy="220.7" r="2.2" fill="#9AA493"/><circle cx="546.6" cy="211.1" r="2.2" fill="#9AA493"/><circle cx="575.4" cy="226.9" r="2.2" fill="#9AA493"/><circle cx="604.3" cy="220.3" r="2.2" fill="#9AA493"/><circle cx="633.1" cy="105.2" r="2.2" fill="#9AA493"/><circle cx="662.0" cy="186.6" r="2.2" fill="#9AA493"/><circle cx="690.9" cy="219.9" r="2.2" fill="#9AA493"/><circle cx="719.7" cy="203.1" r="2.2" fill="#9AA493"/><circle cx="748.6" cy="204.2" r="2.2" fill="#9AA493"/><circle cx="777.4" cy="127.5" r="2.2" fill="#9AA493"/><circle cx="806.3" cy="233.9" r="2.2" fill="#9AA493"/><circle cx="835.1" cy="211.9" r="2.2" fill="#9AA493"/><circle cx="864.0" cy="206.4" r="2.2" fill="#9AA493"/><polyline fill="none" stroke="#1E2F23" stroke-width="2.4" points="56.0,204.9 84.9,178.9 113.7,182.2 142.6,211.9 171.4,182.9 200.3,164.6 229.1,158.0 258.0,188.0 286.9,151.4 315.7,154.7 344.6,151.4 373.4,202.3 402.3,207.8 431.1,180.0 460.0,163.1 488.9,164.6 517.7,195.4 546.6,219.6 575.4,219.2 604.3,184.0 633.1,170.8 662.0,170.4 690.9,203.1 719.7,208.9 748.6,178.1 777.4,188.4 806.3,191.0 835.1,217.4 864.0,235.0"/><circle cx="229.1" cy="158.0" r="5" fill="#C9785C" stroke="#FFFDF7" stroke-width="1.5"/><circle cx="344.6" cy="151.4" r="5" fill="#C9785C" stroke="#FFFDF7" stroke-width="1.5"/><circle cx="460.0" cy="163.1" r="5" fill="#C9785C" stroke="#FFFDF7" stroke-width="1.5"/><circle cx="286.9" cy="151.4" r="5.5" fill="#FFFDF7" stroke="#C9785C" stroke-width="1.8"/><line x1="286.9" x2="276.9" y1="144.4" y2="70.3" stroke="#596754" stroke-width=".8"/><text x="270.9" y="54.3" class="ann" text-anchor="end" >peak, but only</text><text x="270.9" y="68.3" class="ann" text-anchor="end" >7 words since last cut</text><line x1="84.9" x2="90.9" y1="116.0" y2="92.3" stroke="#596754" stroke-width=".8"/><text x="80.9" y="74.3" class="ann" text-anchor="start" >isolated spike,</text><text x="80.9" y="88.3" class="ann" text-anchor="start" >absorbed by smoothing</text><text x="468.0" y="52.0" class="ann" text-anchor="start" >accepted cut</text><line x1="356" x2="378" y1="352" y2="352" stroke="#9AA493"/><text x="384.0" y="356.0" class="lab sm muted" text-anchor="start" >raw score</text><line x1="466" x2="488" y1="352" y2="352" stroke="#1E2F23" stroke-width="2.4"/><text x="494.0" y="356.0" class="lab sm muted" text-anchor="start" >3-boundary moving average</text><text x="56.0" y="356.0" class="lab sm muted" text-anchor="start" >x-axis: sentence boundary index</text><text x="56.0" y="266.0" class="lab sm muted" text-anchor="middle" >0</text><text x="200.3" y="266.0" class="lab sm muted" text-anchor="middle" >5</text><text x="344.6" y="266.0" class="lab sm muted" text-anchor="middle" >10</text><text x="488.9" y="266.0" class="lab sm muted" text-anchor="middle" >15</text><text x="633.1" y="266.0" class="lab sm muted" text-anchor="middle" >20</text><text x="777.4" y="266.0" class="lab sm muted" text-anchor="middle" >25</text><rect x="57.0" y="284" width="171.1" height="30" fill="#F3EDDE" stroke="#D6D9CD"/><text x="142.6" y="303.0" class="lab sm" text-anchor="middle" >chunk 1: 75 words</text><rect x="230.1" y="284" width="113.4" height="30" fill="#F3EDDE" stroke="#D6D9CD"/><text x="286.9" y="303.0" class="lab sm" text-anchor="middle" >chunk 2: 24 words</text><rect x="345.6" y="284" width="113.4" height="30" fill="#F3EDDE" stroke="#D6D9CD"/><text x="402.3" y="303.0" class="lab sm" text-anchor="middle" >chunk 3: 43 words</text><rect x="461.0" y="284" width="402.0" height="30" fill="#F3EDDE" stroke="#D6D9CD"/><text x="662.0" y="303.0" class="lab sm" text-anchor="middle" >chunk 4: 173 words</text></svg></div>
+<figcaption><b>Figure 5. The boundary rule, run exactly as implemented, on an illustrative score series.</b> The scores are synthetic so that every behavior appears in one picture; the smoothing, threshold, peak-finding, and glue are the code's. An isolated early spike never clears the threshold once averaged. A large spike at boundary 9 becomes twin smoothed peaks: the first is rejected by the 15-word glue, and the cut lands one sentence later. Note too that the threshold is relative to the trace, so a moderate turn late in the trace (boundary 20) is not cut because a larger spike raised τ.</figcaption>
+</figure>
+
+<div class="col">
+
+<p>Two properties of Figure 5 are worth flagging because they are easy to miss in the code. First, a three-point average turns a single sharp spike into a plateau, so the cut can land a sentence away from the spike itself. Second, the threshold is set per trace, so the chunker always finds the <em>relatively</em> surprising boundaries. A trace with one dramatic turn will have its milder turns suppressed. Both are fixable; both are the kind of thing a boundary-quality evaluation should surface.</p>
+
+<p>One design choice matters more than any constant: <strong>the chunker never rewrites the trace.</strong> It only places boundaries. A monitor should still be able to inspect the exact words the policy model produced; paraphrasing or summarizing first risks deleting the odd phrasing, contradiction, or policy-relevant detail we wanted to monitor in the first place.</p>
+
+<p>The extra computation is one prompt-only forward pass per context window rather than another autoregressive generation. In practice that should usually be cheaper than producing the original trace, although the exact cost depends on model size and context length. The scoring model also does not have to be the model that wrote the trace; whether it <em>should</em> be is one of the open questions below.</p>
+
+<h2 id="enables">What turns make possible</h2>
+
+<h3>A monitor that reports when, not just whether</h3>
+
+<p>With turns underneath the rollout, a monitor can still emit one score, but it can also emit a short evidence path. Four quantities fall out naturally.</p>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Quantity</th><th>The question it answers</th></tr></thead>
+<tbody>
+<tr><td>Localization</td><td>Which turn first contains evidence that justifies the alarm?</td></tr>
+<tr><td>Lead time</td><td>How many turns before the relevant action does the monitor become confident?</td></tr>
+<tr><td>Persistence</td><td>Does the signal survive later revision, or was it a transient false alarm?</td></tr>
+<tr><td>Transfer</td><td>Does the same local pattern generalize across models, prompts, and paraphrases?</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Lead time is not just a cosmetic metric. Chan et al. explicitly ask whether alignment can be predicted <em>before</em> a reasoning model finishes thinking, and find that useful signals can appear in early CoT segments, although activation probes outperform text-based monitors in their setting.<sup class="ref"><a href="#r8">8</a></sup> Semantic turns would give text-based monitors adaptive checkpoints for asking the same temporal question without committing to a fixed token count.</p>
+
+</div>
+
+<figure id="fig5">
+<div class="plate">
+<svg viewBox="0 0 880 272" role="img" aria-labelledby="f5t f5d" class="fig-svg"><title id="f5t">A turn-aware monitor report</title><desc id="f5d">Monitor confidence across eight turns stays low for three turns, crosses the alert line at turn four, stays above it through turn eight, and the action follows. The rollout-level score is the same as the final turn.</desc><line x1="40" x2="674" y1="210" y2="210" stroke="#1E2F23"/><line x1="40" x2="674" y1="157.5" y2="157.5" stroke="#C9785C" stroke-dasharray="6 4"/><text x="40.0" y="151.5" class="lab sm" text-anchor="start" style="fill:#C9785C">alert level</text><rect x="54" y="198.0" width="50" height="12.0" fill="#9AA493" opacity="0.7"/><text x="79.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 1</text><rect x="132" y="195.0" width="50" height="15.0" fill="#9AA493" opacity="0.7"/><text x="157.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 2</text><rect x="210" y="192.0" width="50" height="18.0" fill="#9AA493" opacity="0.7"/><text x="235.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 3</text><rect x="288" y="127.5" width="50" height="82.5" fill="#C9785C" opacity="1"/><text x="313.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 4</text><rect x="366" y="117.0" width="50" height="93.0" fill="#C9785C" opacity="1"/><text x="391.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 5</text><rect x="444" y="147.0" width="50" height="63.0" fill="#C9785C" opacity="1"/><text x="469.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 6</text><rect x="522" y="105.0" width="50" height="105.0" fill="#C9785C" opacity="1"/><text x="547.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 7</text><rect x="600" y="82.5" width="50" height="127.5" fill="#C9785C" opacity="1"/><text x="625.0" y="228.0" class="lab sm muted" text-anchor="middle" >turn 8</text><rect x="678" y="170" width="64" height="40" rx="3" fill="#1E2F23"/><text x="710.0" y="195.0" class="lab sm" text-anchor="middle" style="fill:#FFFDF7">action</text><line x1="313.0" x2="313.0" y1="121.5" y2="40" stroke="#596754" stroke-width=".8"/><text x="307.0" y="36.0" class="ann" text-anchor="end" >localization: first supporting turn</text><path d="M313.0 60 H710" stroke="#1E2F23" stroke-width="1" marker-end="url(#ah)" fill="none"/><text x="321.0" y="54.0" class="ann" text-anchor="start" >lead time: 5 turns before the action</text><path d="M288 240 H650" stroke="#C9785C" stroke-width="3"/><text x="288.0" y="258.0" class="ann" text-anchor="start" >persistence: signal holds through later revision</text><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#1E2F23"/></marker></defs><rect x="754" y="70" width="124" height="92" rx="4" fill="#F3EDDE"/><text x="764.0" y="94.0" class="lab sm muted" text-anchor="start" >Rollout score</text><text x="764.0" y="124.0" class="num" text-anchor="start" >0.85</text><text x="764.0" y="148.0" class="lab sm muted" text-anchor="start" >unchanged</text></svg>
+</div>
+<figcaption><b>Figure 6. What a turn-aware monitor could report (schematic).</b> The rollout-level verdict is unchanged. Underneath it, the monitor records the first turn with supporting evidence, whether that evidence persists, and how far ahead of the action it arrived.</figcaption>
+</figure>
+
+<div class="col">
+
+<h3>A geometry for a single trace</h3>
+
+<p>Once a trace is split into coherent turns, there is a second possibility: embed each turn and treat the reasoning as a path <em>e</em><sub>1</sub> → <em>e</em><sub>2</sub> → … → <em>e</em><sub><em>T</em></sub> through semantic space. The interesting object is not a global cluster of “good thoughts” and “bad thoughts.” It is the <strong>within-trace geometry</strong>: how far each turn moves from the last, whether the path revisits an earlier region, and whether late turns settle into a stable neighborhood. Even one rollout has shape:</p>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Measure</th><th>Definition</th><th>What it might capture</th></tr></thead>
+<tbody>
+<tr><td>Displacement</td><td>1 − cos(<em>e<sub>t</sub></em>, <em>e</em><sub><em>t</em>−1</sub>)</td><td>Pivots and new subproblems</td></tr>
+<tr><td>Recurrence</td><td>Similarity to a non-adjacent earlier turn</td><td>Circular reconsideration</td></tr>
+<tr><td>Turning angle</td><td>Angle between successive displacement vectors</td><td>Sharp revisions of direction</td></tr>
+<tr><td>Convergence</td><td>Whether step size shrinks and late turns cluster</td><td>Settling on one route</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>To be clear about what this is: geometry over the <em>externalized semantics</em> of the scratchpad, not geometry of hidden model state. Cosine distance between two text embeddings is not a causal statement about computation. The useful first question is much weaker: do simple within-trace quantities such as recurrence or convergence predict recognizable reasoning regimes after controlling for obvious baselines like trace length?</p>
+
+<p>There is a technical trap here: embedding each chunk in isolation can remove context that determines what the chunk means. Late Chunking was introduced for exactly this general failure mode in retrieval—encode the long context first, then pool the local chunk representation afterward.<sup class="ref"><a href="#r11">11</a></sup> For reasoning traces, any geometric result should survive at least an isolated-embedding baseline and a context-aware embedding scheme. If the trajectory changes completely with that choice, the “geometry” was mostly an artifact of the encoder.</p>
+
+<h3>A first look: where hedging happens matters</h3>
+
+<p>To see whether temporal structure is worth keeping at all, I read 20 labelled MMLU traces from Qwen3-4B-Thinking-2507 closely: 12 correct, 6 wrong, and 2 that hadn't finished after three minutes. This is qualitative and tiny, so treat what follows as hypothesis generation.</p>
+
+</div>
+
+<figure id="fig6">
+<div class="plate"><svg viewBox="0 0 880 322" role="img" aria-labelledby="f6t f6d" class="fig-svg"><title id="f6t">Twenty MMLU traces grouped by trajectory regime</title><desc id="f6d">Quick confident: 5 correct and 2 wrong. Deliberate converger: 7 correct. Confused wrong: 3 wrong. Spiral diverger: 2 timeouts. Extraction error: 1. The quick confident group mixes correct and wrong answers.</desc><text x="0.0" y="20.0" class="lab sm muted" text-anchor="start" >Regime</text><text x="330.0" y="20.0" class="lab sm muted" text-anchor="start" >Traces</text><text x="540.0" y="20.0" class="lab sm muted" text-anchor="start" >Hedging across chunks (schematic)</text><text x="0.0" y="54.0" class="lab strong" text-anchor="start" >Quick confident</text><text x="0.0" y="71.0" class="lab sm muted" text-anchor="start" >short, linear, commits early</text><rect x="330" y="42" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="353" y="42" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="376" y="42" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="399" y="42" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="422" y="42" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="445" y="42" width="18" height="18" rx="2" fill="#C9785C" stroke="none" stroke-dasharray="0"/><rect x="468" y="42" width="18" height="18" rx="2" fill="#C9785C" stroke="none" stroke-dasharray="0"/><path d="M325 37 h166 v28 h-166 z" fill="none" stroke="#1E2F23" stroke-width=".8" stroke-dasharray="3 3"/><line x1="540" x2="690" y1="64" y2="64" stroke="#D6D9CD"/><polyline points="540,58.8 570,60.1 600,59.3 630,60.9 660,61.4 690,61.9" fill="none" stroke="#1E2F23" stroke-width="1.8"/><text x="706.0" y="58.0" class="lab sm muted" text-anchor="start" >low throughout</text><text x="0.0" y="102.0" class="lab strong" text-anchor="start" >Deliberate converger</text><text x="0.0" y="119.0" class="lab sm muted" text-anchor="start" >explores, then narrows</text><rect x="330" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="353" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="376" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="399" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="422" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="445" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><rect x="468" y="90" width="18" height="18" rx="2" fill="#3F8F56" stroke="none" stroke-dasharray="0"/><line x1="540" x2="690" y1="112" y2="112" stroke="#D6D9CD"/><polyline points="540,91.2 570,88.6 600,93.8 630,100.3 660,105.5 690,108.9" fill="none" stroke="#1E2F23" stroke-width="1.8"/><text x="706.0" y="106.0" class="lab sm muted" text-anchor="start" >high early, falls late</text><text x="0.0" y="150.0" class="lab strong" text-anchor="start" >Confused wrong</text><text x="0.0" y="167.0" class="lab sm muted" text-anchor="start" >keeps hedging to the end</text><rect x="330" y="138" width="18" height="18" rx="2" fill="#C9785C" stroke="none" stroke-dasharray="0"/><rect x="353" y="138" width="18" height="18" rx="2" fill="#C9785C" stroke="none" stroke-dasharray="0"/><rect x="376" y="138" width="18" height="18" rx="2" fill="#C9785C" stroke="none" stroke-dasharray="0"/><line x1="540" x2="690" y1="160" y2="160" stroke="#D6D9CD"/><polyline points="540,147.0 570,141.8 600,144.4 630,140.5 660,141.8 690,139.2" fill="none" stroke="#1E2F23" stroke-width="1.8"/><text x="706.0" y="154.0" class="lab sm muted" text-anchor="start" >persists into last chunks</text><text x="0.0" y="198.0" class="lab strong" text-anchor="start" >Spiral diverger</text><text x="0.0" y="215.0" class="lab sm muted" text-anchor="start" >loops, never lands</text><rect x="330" y="186" width="18" height="18" rx="2" fill="#7C8578" stroke="none" stroke-dasharray="0"/><rect x="353" y="186" width="18" height="18" rx="2" fill="#7C8578" stroke="none" stroke-dasharray="0"/><line x1="540" x2="690" y1="208" y2="208" stroke="#D6D9CD"/><polyline points="540,187.2 570,183.3 600,185.9 630,184.6 660,182.0 690,184.6" fill="none" stroke="#1E2F23" stroke-width="1.8"/><text x="706.0" y="202.0" class="lab sm muted" text-anchor="start" >high everywhere</text><text x="0.0" y="246.0" class="lab strong" text-anchor="start" >Extraction error</text><text x="0.0" y="263.0" class="lab sm muted" text-anchor="start" >right reasoning, wrong parse</text><rect x="330" y="234" width="18" height="18" rx="2" fill="#FFFDF7" stroke="#7C8578" stroke-dasharray="2 2"/><text x="706.0" y="250.0" class="lab sm muted" text-anchor="start" ></text><rect x="0" y="301" width="12" height="12" rx="2" fill="#3F8F56"/><text x="18.0" y="312.0" class="lab sm muted" text-anchor="start" >correct</text><rect x="90" y="301" width="12" height="12" rx="2" fill="#C9785C"/><text x="108.0" y="312.0" class="lab sm muted" text-anchor="start" >wrong</text><rect x="180" y="301" width="12" height="12" rx="2" fill="#7C8578"/><text x="198.0" y="312.0" class="lab sm muted" text-anchor="start" >timeout</text><text x="280.0" y="312.0" class="lab sm muted" text-anchor="start" >Dashed box: the blind spot. Two confidently wrong recalls look like quick correct answers.</text></svg></div>
+<figcaption><b>Figure 7. Twenty traces, five regimes.</b> Counts are from the hand analysis; the hedging curves are schematic summaries of each regime, not measurements. Median trace length was about 850 words for correct answers, 590 for wrong ones, and 3,160 for timeouts.</figcaption>
+</figure>
+
+<div class="col">
+
+<p>The main takeaway is that <strong>totals don't separate good reasoning from bad, but trajectories might.</strong> Hedging and backtracking appear in correct and incorrect traces alike. Deliberate convergers hedge heavily early and then settle. Confused traces keep hedging into their final turns. Spiral divergers revisit the same options until they run out of time; one repeats "But wait" eight times and "Let me think again" five times. What distinguishes these is <em>where</em> the hedging sits and whether it decays, which is precisely the information a rollout-level count throws away.</p>
+
+<p>The dashed box in Figure 7 is the important constraint. Two wrong answers were confident factual misrecalls: short, linear traces with no hedging and no revision, indistinguishable in shape from quick correct answers. <strong>No segmentation scheme can surface evidence the scratchpad never contained.</strong> The goal is narrower: when a trace does contain useful local dynamics, keep them in a form a monitor can use.</p>
+
+<p>One more lesson from the sample was mundane. One "wrong" trace concluded the right answer several times, and the answer extractor pulled the wrong option. Label noise shows up even at n = 20, and turn-level reading is one of the easier ways to catch it.</p>
+
+<h2 id="open">Open problems</h2>
+
+<p>Everything above is a position plus a prototype, not a monitorability result. The next step is to make the representation earn its complexity. The useful experiments are the ones that can kill the idea quickly.</p>
+
+<div class="problem">
+<h3>1. Do branching peaks track consequential steps?</h3>
+<p>This is the cheapest and strongest first test. Thought Anchors already provides sentence-level counterfactual importance from resampling: change one sentence and measure how much the downstream answer distribution moves.<sup class="ref"><a href="#r4">4</a></sup> Thought Branches extends that logic by showing why a single edited continuation can be misleading and introduces repeated resampling to measure whether a reasoning step is resilient to removal.<sup class="ref"><a href="#r9">9</a></sup> Score the same traces with the branching signal. If entropy peaks do not preferentially fall near high-impact or resilient planning/backtracking steps, then the boundary score is probably measuring surface uncertainty rather than reasoning structure.</p>
+</div>
+
+<div class="problem">
+<h3>2. Are these good boundaries?</h3>
+<p>Have annotators mark major reasoning transitions in a few hundred free-form traces, scoring with a tolerance window rather than exact positions. Compare fixed-token windows, sentence windows, structural markers, marker splitting, and the branching chunker on boundary precision and recall, chunk completeness, how much context each chunk needs to be interpretable, and stability under harmless paraphrase. This is the metric that would fill the empty row in Figure 2 with a real number. Design it before running the comparison, and penalize coarseness explicitly; otherwise the method that produces the fewest, longest chunks wins by default. Compare the boundary score itself against observed-token surprisal, full-vocabulary entropy, Bayesian surprise between adjacent predictive distributions, embedding distance, and a small learned classifier.</p>
+</div>
+
+<div class="problem">
+<h3>3. Do better boundaries make a better monitor?</h3>
+<p>Hold the policy trace, monitor model, prompt, total token budget, and number of monitor calls fixed; change only the boundaries. Compare whole-rollout, fixed-window, semantic, and randomized segmentation. Measure the ordinary episode-level metric, but also localization and lead time. The key kill test is simple: <strong>shift, merge, or randomize the boundaries while keeping every word unchanged.</strong> If the gains survive arbitrary boundaries, the monitor benefited from formatting or repeated prompting, not from semantics.</p>
+</div>
+
+<div class="problem">
+<h3>4. Is trace geometry real?</h3>
+<p>Compare real turn order against shuffled order and perturbed boundaries, across at least two embedding models and the three context strategies above. A geometric score is interesting only if it is stable across reasonable choices and predicts something that trace length and lexical counts don't already explain.</p>
+</div>
+
+<div class="problem">
+<h3>5. Which model should score the trace?</h3>
+<p>Using the policy model's own log-probabilities is the most natural choice, but it isn't always available, and a small open scorer is much cheaper. How much do boundaries move when the scorer changes? A chunker that works only with the policy's own logits is far less deployable.</p>
+</div>
+
+<div class="problem">
+<h3>6. Agentic traces</h3>
+<p>Agent transcripts interleave reasoning with tool calls and observations, which are natural boundaries of a different kind. Does a branching signal add anything beyond tool-call structure, and does it find turns <em>within</em> long reasoning segments between calls?</p>
+</div>
+
+<div class="problem">
+<h3>7. Can the signal be gamed?</h3>
+<p>If a model is ever optimized against a turn-aware monitor, it may learn to smear evidence across boundaries or flatten its own predictive distribution at pivots. Baker et al. already show the broader failure mode: sufficiently strong optimization against a CoT monitor can push the model toward obfuscated reward hacking.<sup class="ref"><a href="#r2">2</a></sup> This deserves a stress test before anyone relies on it.</p>
+</div>
+
+<h2 id="limits">Limitations</h2>
+
+<ul>
+<li><strong>Chains of thought aren't guaranteed to be faithful.</strong> Chen et al. show that reasoning models often fail to verbalize prompt information that causally changed their answer.<sup class="ref"><a href="#r10">10</a></sup> No text-level segmentation can recover evidence the model never externalized.</li>
+<li><strong>The boundary score is a heuristic.</strong> A broad next-token distribution can mark a real pivot, but it can also reflect an unusual proper noun, formatting choice, or locally ambiguous prose. Predictive uncertainty and semantic importance are not the same quantity.</li>
+<li><strong>Sentence windows may simply be enough.</strong> Their chunk quality is excellent. Adaptive boundaries earn their complexity only if they improve monitoring or localization.</li>
+<li><strong>The evidence is still diagnostic rather than decisive.</strong> The 100-trace audit rates chunk quality, not boundary correctness; the 2,082-trace paired audit measures segmentation statistics, not semantic alignment; and the MMLU analysis is 20 traces from one model.</li>
+<li><strong>Embedding geometry depends on the representation.</strong> Different encoders, context strategies, and projections can distort the path.</li>
+</ul>
+
+<h2 id="land">Where I land</h2>
+
+<p>Chain of thought is an odd interface: part computation, part language, and a complete view of neither. That makes the choice of granularity more consequential than it looks. If the scratchpad unfolds in reasoning moves, it seems worth reading it at the scale of those moves.</p>
+
+<p>To summarize the pieces: sentence windows are a strong baseline. Epistemic words are useful features but poor delimiters. Branching-factor peaks are one cheap candidate for where turns happen. Turn embeddings offer a second, geometric view of how a single trace moves. None of this yet shows that semantic turns make monitors better.</p>
+
+<p>The empirical question is clean. <strong>Does a turn-level representation let the same monitor find the important evidence earlier, more precisely, or more robustly than a full rollout or a fixed window?</strong> If it does, the chunker has earned a place in the monitoring stack. If it doesn't, the simple baseline wins, and that is worth knowing too.</p>
+
+<p class="note">The implementation is a small Python pipeline: sentence segmentation, prompt-logprob boundary scoring, adaptive peak detection, minimum-length gluing, and optional chunk embeddings. The chunk-quality, paired-segmentation, and MMLU analyses are exploratory; they motivate baselines and hypotheses and are not evidence of improved monitoring. Feedback—especially on the boundary-quality and monitor-ablation experiments—is very welcome.</p>
+
+<section class="refs" aria-labelledby="refs-h">
+<h2 id="refs-h">References</h2>
+<ol>
+<li id="r1"><a href="https://arxiv.org/abs/2112.00114">Nye et al. (2021). Show Your Work: Scratchpads for Intermediate Computation with Language Models.</a></li>
+<li id="r2"><a href="https://arxiv.org/abs/2503.11926">Baker et al. (2025). Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation.</a></li>
+<li id="r3"><a href="https://arxiv.org/abs/2510.23966">Emmons et al. (2025). A Pragmatic Way to Measure Chain-of-Thought Monitorability.</a></li>
+<li id="r4"><a href="https://arxiv.org/abs/2506.19143">Bogdan, Macar, Nanda &amp; Conmy (2025). Thought Anchors: Which LLM Reasoning Steps Matter?</a></li>
+<li id="r5"><a href="https://arxiv.org/abs/2606.05402">Lee et al. (2026). ReasoningFlow: Discourse Structures for Understanding LLM Reasoning Traces.</a></li>
+<li id="r6"><a href="https://arxiv.org/abs/2604.06389">Pandey, Raghu &amp; Pandey (2026). SELFDOUBT: Uncertainty Quantification for Reasoning LLMs via the Hedge-to-Verify Ratio.</a></li>
+<li id="r7"><a href="https://arxiv.org/abs/2506.01939">Wang et al. (2025). Beyond the 80/20 Rule: High-Entropy Minority Tokens Drive Effective Reinforcement Learning for LLM Reasoning.</a></li>
+<li id="r8"><a href="https://arxiv.org/abs/2507.12428">Chan, Yong &amp; Bach (2025). Can We Predict Alignment Before Models Finish Thinking?</a></li>
+<li id="r9"><a href="https://arxiv.org/abs/2510.27484">Macar, Bogdan, Rajamanoharan &amp; Nanda (2025). Thought Branches: Interpreting LLM Reasoning Requires Resampling.</a></li>
+<li id="r10"><a href="https://arxiv.org/abs/2505.05410">Chen et al. (2025). Reasoning Models Don't Always Say What They Think.</a></li>
+<li id="r11"><a href="https://arxiv.org/abs/2409.04701">Günther et al. (2024). Late Chunking: Contextual Chunk Embeddings Using Long-Context Embedding Models.</a></li>
+<li id="r12"><a href="https://arxiv.org/abs/2507.11473">Korbak et al. (2025). Chain of Thought Monitorability: A New and Fragile Opportunity for AI Safety.</a></li>
+<li id="r13"><a href="https://arxiv.org/abs/2512.18311">Guan et al. (2025; ICML 2026). Monitoring Monitorability.</a></li>
+<li id="r14"><a href="https://www.lesswrong.com/posts/z9fPtghFxELBXebY3/evaluating-chain-of-thought-monitorability-is-still-an-open">Dilgren &amp; Wiegreffe (2026). Evaluating Chain-of-Thought Monitorability is Still an Open Problem: Comments on OpenAI's Monitorability Evals.</a></li>
+</ol>
+</section>
+</div>
+</main>
+<footer>© 2026 Satwik Pandey. <a href="https://satwik2711.github.io">satwik2711.github.io</a></footer>
+</body>
+</html>

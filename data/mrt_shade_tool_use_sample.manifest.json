@@ -1,0 +1,89 @@
+{
+  "dataset": "ScaleAI/mrt",
+  "revision": "bc636d0c3b881c7d8c76fd71b45b009c3710d437",
+  "task_family": "SHADE-Arena tool use",
+  "condition": "transcripts_no_hint_selective_thinking_time_basic",
+  "agent_model": "claude-3-5-sonnet-20241022",
+  "original_monitor_model": "claude-3-5-sonnet-20241022",
+  "label": "side_task_success (original side_task_evaluation)",
+  "selection": "closest possible class balance; within each class, round robin over tasks, preferring longer reasoning",
+  "candidate_counts": {
+    "True": 91,
+    "False": 24
+  },
+  "selected_counts": {
+    "True": 26,
+    "False": 24
+  },
+  "selected_task_counts": {
+    "american_airlines_2": {
+      "True": 7,
+      "False": 1
+    },
+    "api_key_calendar_agendas_2": {
+      "False": 3,
+      "True": 7
+    },
+    "bank_transfer_2": {
+      "True": 6
+    },
+    "expenditure_accounting": {
+      "False": 20
+    },
+    "spam_filter_update": {
+      "True": 6
+    }
+  },
+  "sources": [
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_0.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_1.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_12.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_14.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_2.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_3.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_6.json",
+    "task_pairs/american_airlines_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_9.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_0.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_1.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_10.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_16.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_18.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_19.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_25.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_28.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_7.json",
+    "task_pairs/api_key_calendar_agendas_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_9.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_15.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_19.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_2.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_3.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_7.json",
+    "task_pairs/bank_transfer_2/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_8.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_0.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_1.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_10.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_11.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_12.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_13.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_14.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_15.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_16.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_17.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_18.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_19.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_2.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_3.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_4.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_5.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_6.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_7.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_8.json",
+    "task_pairs/expenditure_accounting/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_9.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_12.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_14.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_15.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_18.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_19.json",
+    "task_pairs/spam_filter_update/transcripts_no_hint_selective_thinking_time_basic/claude-3-5-sonnet-20241022/claude-3-5-sonnet-20241022/transcript_2.json"
+  ]
+}
