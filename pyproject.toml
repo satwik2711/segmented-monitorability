@@ -5,6 +5,7 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "huggingface-hub>=1.0",
     "numpy>=2.0",
+    "python-dotenv>=1.0",
     "scipy>=1.15",
     "torch>=2.6",
     "transformers>=5.0",

@@ -39,10 +39,12 @@ Check monitor inputs without sending any API calls:
 uv run python src/run_monitorability.py --dry-run --output data/mrt_monitor_prompts.jsonl
 ```
 
-For actual monitoring, use one fixed model at an OpenAI-compatible chat endpoint:
+For OpenRouter monitoring, put your API key after `MONITOR_API_KEY=` in the ignored `.env` file at the repo root. Set `MONITOR_API_BASE=https://openrouter.ai/api/v1` and `MONITOR_MODEL=typesafe/jev-1.13`. Jev returns a typed yes/no probability through OpenRouter's decisions endpoint; the runner thresholds it at 0.5. The version is pinned so the monitor stays fixed for all conditions. Then run:
 
 ```sh
-MONITOR_API_BASE=http://localhost:1234 uv run python src/run_monitorability.py --model YOUR_MONITOR_MODEL
+uv run python src/run_monitorability.py
 ```
 
-Set `MONITOR_API_KEY` if the endpoint requires a bearer token. The runner writes one verdict per trajectory and condition to `data/mrt_monitor_verdicts.jsonl`, followed by a `.summary.json` with TPR, TNR, and G². Use `--resume` after an interrupted run. Experiment 2 uses ACTION, COT, and FULL; Experiment 3 compares RAW, FIX4, RANDOM-K, and ENTROPY under FULL at complete and halfway prefixes. The halfway cutoff is fixed once per raw trajectory using the Qwen tokenizer, then reused for every representation. No reasoning block is split across the cutoff.
+The runner writes one verdict per trajectory and condition to `data/mrt_jev_verdicts.jsonl`, followed by a `.summary.json` with TPR, TNR, and G². Earlier Qwen and DeepSeek verdict files remain separate. Each Jev verdict records the number and sizes of input windows, their probabilities, providers, returned model versions, and usage. Use `--resume` after an interrupted run. Experiment 2 uses ACTION, COT, and FULL; Experiment 3 compares RAW, FIX4, RANDOM-K, and ENTROPY under FULL at complete and halfway prefixes. The halfway cutoff is fixed once per raw trajectory using the Qwen tokenizer, then reused for every representation. No reasoning block is split across the cutoff.
+
+Jev has a 32K-token context. The runner greedily packs complete trajectory events into windows under a 28K Qwen proxy-token budget; FULL uses the same event boundaries under every reasoning representation. Every event is retained, and the maximum yes probability across windows gives one verdict. This max aggregation is a heuristic for long trajectories: a task that requires combining evidence across windows may be misjudged, so report the window count alongside results. The preview of the frozen sample requires 559 calls: 451 conditions fit in one window, 39 need two, and 10 need three. The largest preview window used 28,163 Jev input tokens in a live check. At Jev's listed $0.042/M input tokens with free output, roughly 6.59 million Qwen proxy input tokens imply about $0.28 input cost, subject to Jev tokenization. Requests are paced at least one second apart; use `--request-interval SECONDS` to change this. `--jev-input-budget` controls window size (at most 30,000 proxy tokens). Provider 429 responses back off for at least 30, 60, 120, then 120 seconds (or longer if `Retry-After` requests it).
